@@ -3,7 +3,7 @@
 > **Target Cadence:** ~2 phases per day  
 > **Repository:** `git@github.com:luscanascimento/hookbridge.git`  
 > **Current Date:** 2026-09-01  
-> **Status:** Phases 0, 1 & 2 Completed, Phase 3 Next  
+> **Status:** Phases 0, 1, 2 & 3 Completed, Phase 4 Next  
 
 ---
 
@@ -13,9 +13,9 @@
 | :--- | :--- | :---: | :--- |
 | **FASE 0** | **EventFlow Contract & Boundary Analysis** | ✅ **DONE** | `docs: define eventflow integration contract` (`3490ab7`) |
 | **FASE 1** | **Product Scope, Domain Architecture & Initial Threat Model** | ✅ **DONE** | `docs: define hookbridge architecture` (`aeaaab7`) |
-| **FASE 2** | **Backend Foundation (.NET 10 Solution, ProblemDetails, HealthChecks)** | ✅ **DONE** | `feat: add backend foundation` |
-| **FASE 3** | **Authentication & Multi-Tenant Authorization** | ⏳ *Next* | `feat: implement multi-tenant authorization` |
-| **FASE 4** | **Control Plane (Apps, Endpoints, Subscriptions, API Keys, Secrets)** | ⬜ Pending | `feat: implement webhook control plane` |
+| **FASE 2** | **Backend Foundation (.NET 10 Solution, ProblemDetails, HealthChecks)** | ✅ **DONE** | `feat: add backend foundation` (`896a013`) |
+| **FASE 3** | **Authentication & Multi-Tenant Authorization** | ✅ **DONE** | `feat: implement multi-tenant authorization` |
+| **FASE 4** | **Control Plane (Apps, Endpoints, Subscriptions, API Keys, Secrets)** | ⏳ *Next* | `feat: implement webhook control plane` |
 | **FASE 5** | **Webhook Signing (HMAC-SHA256, Secret Rotation, Anti-Replay)** | ⬜ Pending | `feat: implement webhook signing` |
 | **FASE 6** | **EventFlow Integration Client & Publishing Pipeline** | ⬜ Pending | `feat: integrate eventflow` |
 | **FASE 7** | **Deliveries & Attempt Tracking with DLQ Visibility** | ⬜ Pending | `feat: add delivery tracking` |

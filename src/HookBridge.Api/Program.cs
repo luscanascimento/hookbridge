@@ -24,8 +24,10 @@ app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
-// 5. Multi-Tenant Context Resolution
+// 5. Authentication & Authorization Pipeline
+app.UseAuthentication();
 app.UseMiddleware<TenantResolutionMiddleware>();
+app.UseAuthorization();
 
 // 6. Map OpenAPI and Developer Portal in Development
 if (app.Environment.IsDevelopment())
@@ -41,6 +43,7 @@ if (app.Environment.IsDevelopment())
 // 7. Map Endpoints
 app.MapHealthEndpoints();
 app.MapDiagnosticsEndpoints();
+app.MapAuthEndpoints();
 
 app.Run();
 

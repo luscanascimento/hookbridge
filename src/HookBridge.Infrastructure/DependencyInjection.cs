@@ -1,11 +1,18 @@
+using System.Security.Claims;
+using System.Text;
 using HookBridge.Application.Abstractions;
+using HookBridge.Domain.Common;
+using HookBridge.Domain.Enums;
 using HookBridge.Infrastructure.MultiTenancy;
 using HookBridge.Infrastructure.Persistence;
 using HookBridge.Infrastructure.Security;
 using HookBridge.Infrastructure.Telemetry;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace HookBridge.Infrastructure;
 
@@ -13,11 +20,57 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Multi-Tenancy & Actor Identity
+        // 1. Multi-Tenancy & Actor Identity
         services.AddScoped<ITenantContext, TenantContext>();
         services.AddScoped<ICurrentUser, CurrentUser>();
 
-        // PostgreSQL Persistence
+        // 2. Cryptographic & Auth Services
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddSingleton<ITokenService, TokenService>();
+
+        // 3. JWT Authentication dynamically configured from IOptions<JwtOptions>
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer();
+
+        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+            .Configure<IOptions<JwtOptions>>((options, jwtOpts) =>
+            {
+                var jwt = jwtOpts.Value;
+                var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SecretKey));
+
+                options.RequireHttpsMetadata = false;
+                options.SaveToken = true;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = jwt.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = jwt.Audience,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = signingKey,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.FromSeconds(30),
+                    RoleClaimType = ClaimTypes.Role
+                };
+            });
+
+        // 4. Role-Based Authorization Policies
+        services.AddAuthorizationBuilder()
+            .AddPolicy(AuthorizationPolicies.RequireTenantAdmin, policy =>
+                policy.RequireRole(UserRole.TenantAdmin.ToString(), UserRole.SystemOperator.ToString()))
+            .AddPolicy(AuthorizationPolicies.RequireDeveloper, policy =>
+                policy.RequireRole(UserRole.Developer.ToString(), UserRole.TenantAdmin.ToString(), UserRole.SystemOperator.ToString()))
+            .AddPolicy(AuthorizationPolicies.RequireViewer, policy =>
+                policy.RequireRole(UserRole.Viewer.ToString(), UserRole.Developer.ToString(), UserRole.TenantAdmin.ToString(), UserRole.SystemOperator.ToString()))
+            .AddPolicy(AuthorizationPolicies.RequireSystemOperator, policy =>
+                policy.RequireRole(UserRole.SystemOperator.ToString()));
+
+        // 5. PostgreSQL Persistence
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? "Host=localhost;Port=5432;Database=hookbridge_db;Username=postgres;Password=postgres";
 
@@ -32,7 +85,7 @@ public static class DependencyInjection
 
         services.AddScoped<IHookBridgeDbContext>(sp => sp.GetRequiredService<HookBridgeDbContext>());
 
-        // Observability & Telemetry
+        // 6. Observability & Telemetry
         services.AddHookBridgeTelemetry(configuration);
 
         return services;

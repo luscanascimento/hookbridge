@@ -21,6 +21,9 @@ public sealed class HookBridgeDbContext : DbContext, IHookBridgeDbContext
         _dateTimeProvider = dateTimeProvider;
     }
 
+    public Guid CurrentTenantId => _tenantContext?.TenantId ?? Guid.Empty;
+    public bool HasTenantFilter => _tenantContext?.HasTenant ?? false;
+
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
     public DbSet<DomainApp> Applications => Set<DomainApp>();
@@ -31,6 +34,7 @@ public sealed class HookBridgeDbContext : DbContext, IHookBridgeDbContext
     public DbSet<Delivery> Deliveries => Set<Delivery>();
     public DbSet<Attempt> Attempts => Set<Attempt>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,7 +59,7 @@ public sealed class HookBridgeDbContext : DbContext, IHookBridgeDbContext
         where TEntity : class, ITenantScoped
     {
         modelBuilder.Entity<TEntity>().HasQueryFilter(e =>
-            _tenantContext == null || !_tenantContext.HasTenant || e.TenantId == _tenantContext.TenantId);
+            !HasTenantFilter || e.TenantId == CurrentTenantId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

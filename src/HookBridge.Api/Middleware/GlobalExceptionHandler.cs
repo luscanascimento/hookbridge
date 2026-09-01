@@ -5,15 +5,17 @@ using Microsoft.AspNetCore.Mvc;
 namespace HookBridge.Api.Middleware;
 
 /// <summary>
-/// Global exception handler producing RFC 7807 ProblemDetails responses while preventing internal stack trace disclosure.
+/// Global exception handler producing RFC 7807 ProblemDetails responses while preventing internal stack trace disclosure in production.
 /// </summary>
 public sealed partial class GlobalExceptionHandler : IExceptionHandler
 {
     private readonly ILogger<GlobalExceptionHandler> _logger;
+    private readonly IHostEnvironment _env;
 
-    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
+    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger, IHostEnvironment env)
     {
         _logger = logger;
+        _env = env;
     }
 
     public async ValueTask<bool> TryHandleAsync(
@@ -29,7 +31,9 @@ public sealed partial class GlobalExceptionHandler : IExceptionHandler
         {
             Status = StatusCodes.Status500InternalServerError,
             Title = "An internal server error occurred",
-            Detail = "An unexpected error occurred while processing your request. Please contact support with the trace identifier.",
+            Detail = _env.IsProduction()
+                ? "An unexpected error occurred while processing your request. Please contact support with the trace identifier."
+                : exception.Message,
             Instance = httpContext.Request.Path,
             Extensions =
             {
@@ -37,6 +41,11 @@ public sealed partial class GlobalExceptionHandler : IExceptionHandler
                 ["timestamp"] = DateTimeOffset.UtcNow
             }
         };
+
+        if (!_env.IsProduction())
+        {
+            problemDetails.Extensions["stackTrace"] = exception.ToString();
+        }
 
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
         httpContext.Response.ContentType = "application/problem+json";
