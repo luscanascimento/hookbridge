@@ -105,3 +105,32 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
   - UI states handled (Loading, Empty, Error, Reconnecting).
   - Documented in ADRs / Technical Specs.
 
+
+---
+
+## 5. Current State & Handoff (Last Updated: 2026-09-01)
+
+### Completed Milestones
+1. **FASE 0 — EventFlow Contract & Boundary Analysis** (`3490ab7`)
+   - Data plane analysis of EventFlow (`/home/sirbu/projects/eventflow`).
+   - Contract definition: [`docs/architecture/integration-contract.md`](file:///home/sirbu/projects/hookbridge/docs/architecture/integration-contract.md).
+2. **FASE 1 — Product Scope, Domain Architecture & Threat Model** (`aeaaab7`)
+   - Product scope, domain models, C4 diagrams, initial threat model, and ADRs (0001 to 0004).
+3. **FASE 2 — Backend Foundation** (`896a013`)
+   - .NET 10 solution setup with Clean Architecture (`HookBridge.sln`).
+   - EF Core 10 PostgreSQL configurations with global multi-tenant query filters.
+   - Middlewares: `GlobalExceptionHandler` (RFC 7807 ProblemDetails), `SecurityHeadersMiddleware`, `TenantResolutionMiddleware`.
+   - Health probes (`/health/live`, `/health/ready`) and diagnostics endpoints.
+4. **FASE 3 — Authentication & Multi-Tenant Authorization** (`aca43e1`)
+   - PBKDF2 HMAC-SHA256 password hashing and JWT token issuance with dynamic configuration.
+   - Refresh token entity, secure rotation, and compromise detection.
+   - RBAC policies: `RequireTenantAdmin`, `RequireDeveloper`, `RequireViewer`, `RequireSystemOperator`.
+   - Full test suite: 56/56 unit and integration tests passing.
+
+### Next Session Objective
+- **FASE 4 — Control Plane**:
+  - Implement CRUD and business use cases for `Applications`, `Endpoints`, `Subscriptions`, and `ApiKeys`.
+  - API Key issuance and validation with recognizable prefixes (`hb_live_...`, `hb_test_...`) and permission scopes.
+  - Webhook secret generation and secure storage.
+  - Audit log entries for all control plane actions.
+  - Target commit: `feat: implement webhook control plane`.
