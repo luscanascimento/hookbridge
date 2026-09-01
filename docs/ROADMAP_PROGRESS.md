@@ -3,7 +3,7 @@
 > **Target Cadence:** ~2 phases per day  
 > **Repository:** `git@github.com:luscanascimento/hookbridge.git`  
 > **Current Date:** 2026-09-01  
-> **Status:** Phase 0 Completed, Phase 1 Next  
+> **Status:** Phase 0 & Phase 1 Completed, Phase 2 Next  
 
 ---
 
@@ -12,8 +12,8 @@
 | Phase | Description | Status | Commit / Artifact |
 | :--- | :--- | :---: | :--- |
 | **FASE 0** | **EventFlow Contract & Boundary Analysis** | ✅ **DONE** | `docs: define eventflow integration contract` |
-| **FASE 1** | **Product Scope, Domain Architecture & Initial Threat Model** | ⏳ *Next* | `docs: define hookbridge architecture` |
-| **FASE 2** | **Backend Foundation (.NET 10 Solution, ProblemDetails, HealthChecks)** | ⬜ Pending | `feat: add backend foundation` |
+| **FASE 1** | **Product Scope, Domain Architecture & Initial Threat Model** | ✅ **DONE** | `docs: define hookbridge architecture` |
+| **FASE 2** | **Backend Foundation (.NET 10 Solution, ProblemDetails, HealthChecks)** | ⏳ *Next* | `feat: add backend foundation` |
 | **FASE 3** | **Authentication & Multi-Tenant Authorization** | ⬜ Pending | `feat: implement multi-tenant authorization` |
 | **FASE 4** | **Control Plane (Apps, Endpoints, Subscriptions, API Keys, Secrets)** | ⬜ Pending | `feat: implement webhook control plane` |
 | **FASE 5** | **Webhook Signing (HMAC-SHA256, Secret Rotation, Anti-Replay)** | ⬜ Pending | `feat: implement webhook signing` |
