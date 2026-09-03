@@ -140,15 +140,22 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
    - Anti-replay timestamp tolerance verification ($\le 300\text{s}$) and constant-time verification (`CryptographicOperations.FixedTimeEquals`).
    - Developer portal test endpoints for generating and verifying webhook signatures.
    - Full test suite: 134/134 unit and integration tests passing.
-7. **FASE 6 — EventFlow Integration Client & Publishing Pipeline** (`feat: integrate eventflow`)
+7. **FASE 6 — EventFlow Integration Client & Publishing Pipeline** (`ef6b50c`)
    - HTTP typed integration client (`IEventFlowClient` / `EventFlowClient`) for forwarding events to EventFlow transactional outbox.
    - Ingestion and subscription matching engine provisioning `Delivery` records for active endpoint patterns (`*`, `order.*`, exact).
    - DLQ management use cases and endpoints (Peek, Replay, Purge) for control plane dead-letter governance.
    - W3C TraceContext propagation across HTTP headers and distributed activities (`HookBridge.PublishEvent`).
-   - Full test suite: 154/154 unit and integration tests passing (125 unit + 29 integration).
+   - Full test suite: 154/154 unit and integration tests passing.
+8. **FASE 7 — Deliveries & Attempt Tracking with DLQ Visibility** (`feat: add delivery tracking`)
+   - Paginated delivery querying with multidimensional filters (endpoint, status, event type, date range, correlation ID).
+   - Detailed delivery inspection endpoint with complete historical attempts execution timeline.
+   - Real-time aggregate statistics endpoint (total, success, failed, pending, DLQ count, success rate %, average latency ms).
+   - Delivery attempt recorder with status transitions (`Dispatched`, `Success`, `Failed`, `DeadLettered`) and OpenTelemetry metric updates.
+   - Full test suite: 158/158 unit and integration tests passing (128 unit + 30 integration).
 
 ### Next Session Objective
-- **FASE 7 — Deliveries & Attempt Tracking with DLQ Visibility**:
-  - Implement delivery status querying, attempt history timeline, and delivery filtering by status/endpoint/date range.
-  - DLQ inspection and attempt diagnostic payload viewer.
-  - Target commit: `feat: add delivery tracking`.
+- **FASE 8 — Authorized Delivery Replay Engine**:
+  - Implement single delivery replay (`POST /api/v1/deliveries/{id}/replay`).
+  - Implement bulk delivery replay with query filters (`POST /api/v1/deliveries/replay`).
+  - Replay lineage tracking (`OriginalDeliveryId` link, immutable audit history).
+  - Target commit: `feat: add delivery replay`.

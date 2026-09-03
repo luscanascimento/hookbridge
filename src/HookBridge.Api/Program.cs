@@ -53,6 +53,7 @@ app.MapAuditLogEndpoints();
 app.MapWebhookSignatureEndpoints();
 app.MapEventPublishingEndpoints();
 app.MapDeadLetterEndpoints();
+app.MapDeliveryEndpoints();
 
 app.Run();
 
