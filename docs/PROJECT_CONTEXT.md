@@ -126,17 +126,23 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
    - Refresh token entity, secure rotation, and compromise detection.
    - RBAC policies: `RequireTenantAdmin`, `RequireDeveloper`, `RequireViewer`, `RequireSystemOperator`.
    - Full test suite: 56/56 unit and integration tests passing.
-5. **FASE 4 — Control Plane** (`feat: implement webhook control plane`)
+5. **FASE 4 — Control Plane** (`3c5d10e`)
    - CRUD and business use cases for `Applications`, `Endpoints`, `Subscriptions`, `ApiKeys`, `WebhookSecrets`, and `AuditEntries`.
    - Cryptographic API Key issuance (`hb_live_...`, `hb_test_...`) with SHA-256 storage and scope authorization.
    - AES-256-GCM encryption for webhook secrets at rest with versioned secret rotation and revocation.
    - SSRF protection guard blocking private/loopback/metadata destinations.
    - Complete audit trail ledger for all mutating control plane actions.
-   - Full test suite: 121/121 unit and integration tests passing (95 unit + 26 integration).
+   - Full test suite: 121/121 unit and integration tests passing.
+6. **FASE 5 — Webhook Signing** (`feat: implement webhook signing`)
+   - HMAC-SHA256 signature generator emitting standardized `X-HookBridge-Signature: t=timestamp,v1=signature` headers.
+   - Canonical payload construction (`t.payload`) with UTF-8 encoding.
+   - Multi-secret rotation window support with dual-signature emission (`t=...,v1=sigActive,v1=sigRotating`).
+   - Anti-replay timestamp tolerance verification ($\le 300\text{s}$) and constant-time verification (`CryptographicOperations.FixedTimeEquals`).
+   - Developer portal test endpoints for generating and verifying webhook signatures.
+   - Full test suite: 134/134 unit and integration tests passing (107 unit + 27 integration).
 
 ### Next Session Objective
-- **FASE 5 — Webhook Signing**:
-  - Implement HMAC-SHA256 signature generator (`X-HookBridge-Signature: t=timestamp,v1=signature`).
-  - Secret rotation tolerance windows (dual verification against Active and Rotating secrets).
-  - Anti-replay timestamp verification.
-  - Target commit: `feat: implement webhook signing`.
+- **FASE 6 — EventFlow Integration Client & Publishing Pipeline**:
+  - Implement EventFlow client library for publishing ingested events to Data Plane outbox / AMQP broker.
+  - Implement W3C TraceContext propagation across HTTP / RabbitMQ message headers.
+  - Target commit: `feat: integrate eventflow`.

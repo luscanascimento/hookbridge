@@ -59,6 +59,10 @@ public static class DependencyInjection
         // Control Plane: Audit Logs
         services.AddScoped<GetAuditLogsUseCase>();
 
+        // Control Plane: Webhook Signing
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.WebhookSigning.GenerateEndpointSignatureUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.WebhookSigning.VerifyEndpointSignatureUseCase>();
+
         return services;
     }
 }

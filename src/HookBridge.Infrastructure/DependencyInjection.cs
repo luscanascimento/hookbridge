@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddSingleton<ISecretEncryptor, AesSecretEncryptor>();
         services.AddSingleton<IApiKeyGenerator, KeyGenerator>();
         services.AddSingleton<ISsrfGuard, SsrfGuard>();
+        services.AddSingleton<IWebhookSigner, WebhookSigner>();
 
         // 3. JWT Authentication dynamically configured from IOptions<JwtOptions>
         services.AddAuthentication(options =>

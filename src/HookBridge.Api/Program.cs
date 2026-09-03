@@ -50,6 +50,7 @@ app.MapSubscriptionEndpoints();
 app.MapWebhookSecretEndpoints();
 app.MapApiKeyEndpoints();
 app.MapAuditLogEndpoints();
+app.MapWebhookSignatureEndpoints();
 
 app.Run();
 

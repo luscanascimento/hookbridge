@@ -3,7 +3,7 @@
 > **Target Cadence:** ~2 phases per day  
 > **Repository:** `git@github.com:luscanascimento/hookbridge.git`  
 > **Current Date:** 2026-09-03  
-> **Status:** Phases 0 through 4 Completed, Phase 5 Next  
+> **Status:** Phases 0 through 5 Completed, Phase 6 Next  
 
 ---
 
@@ -15,9 +15,9 @@
 | **FASE 1** | **Product Scope, Domain Architecture & Initial Threat Model** | ✅ **DONE** | `docs: define hookbridge architecture` (`aeaaab7`) |
 | **FASE 2** | **Backend Foundation (.NET 10 Solution, ProblemDetails, HealthChecks)** | ✅ **DONE** | `feat: add backend foundation` (`896a013`) |
 | **FASE 3** | **Authentication & Multi-Tenant Authorization** | ✅ **DONE** | `feat: implement multi-tenant authorization` (`aca43e1`) |
-| **FASE 4** | **Control Plane (Apps, Endpoints, Subscriptions, API Keys, Secrets)** | ✅ **DONE** | `feat: implement webhook control plane` |
-| **FASE 5** | **Webhook Signing (HMAC-SHA256, Secret Rotation, Anti-Replay)** | ⏳ *Next* | `feat: implement webhook signing` |
-| **FASE 6** | **EventFlow Integration Client & Publishing Pipeline** | ⬜ Pending | `feat: integrate eventflow` |
+| **FASE 4** | **Control Plane (Apps, Endpoints, Subscriptions, API Keys, Secrets)** | ✅ **DONE** | `feat: implement webhook control plane` (`3c5d10e`) |
+| **FASE 5** | **Webhook Signing (HMAC-SHA256, Secret Rotation, Anti-Replay)** | ✅ **DONE** | `feat: implement webhook signing` |
+| **FASE 6** | **EventFlow Integration Client & Publishing Pipeline** | ⏳ *Next* | `feat: integrate eventflow` |
 | **FASE 7** | **Deliveries & Attempt Tracking with DLQ Visibility** | ⬜ Pending | `feat: add delivery tracking` |
 | **FASE 8** | **Authorized Delivery Replay Engine** | ⬜ Pending | `feat: add delivery replay` |
 | **FASE 9** | **SignalR Realtime Delivery Hub & Tenant Groups** | ⬜ Pending | `feat: add realtime delivery updates` |
