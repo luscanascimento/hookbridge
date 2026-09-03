@@ -133,16 +133,22 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
    - SSRF protection guard blocking private/loopback/metadata destinations.
    - Complete audit trail ledger for all mutating control plane actions.
    - Full test suite: 121/121 unit and integration tests passing.
-6. **FASE 5 — Webhook Signing** (`feat: implement webhook signing`)
+6. **FASE 5 — Webhook Signing** (`c433848`)
    - HMAC-SHA256 signature generator emitting standardized `X-HookBridge-Signature: t=timestamp,v1=signature` headers.
    - Canonical payload construction (`t.payload`) with UTF-8 encoding.
    - Multi-secret rotation window support with dual-signature emission (`t=...,v1=sigActive,v1=sigRotating`).
    - Anti-replay timestamp tolerance verification ($\le 300\text{s}$) and constant-time verification (`CryptographicOperations.FixedTimeEquals`).
    - Developer portal test endpoints for generating and verifying webhook signatures.
-   - Full test suite: 134/134 unit and integration tests passing (107 unit + 27 integration).
+   - Full test suite: 134/134 unit and integration tests passing.
+7. **FASE 6 — EventFlow Integration Client & Publishing Pipeline** (`feat: integrate eventflow`)
+   - HTTP typed integration client (`IEventFlowClient` / `EventFlowClient`) for forwarding events to EventFlow transactional outbox.
+   - Ingestion and subscription matching engine provisioning `Delivery` records for active endpoint patterns (`*`, `order.*`, exact).
+   - DLQ management use cases and endpoints (Peek, Replay, Purge) for control plane dead-letter governance.
+   - W3C TraceContext propagation across HTTP headers and distributed activities (`HookBridge.PublishEvent`).
+   - Full test suite: 154/154 unit and integration tests passing (125 unit + 29 integration).
 
 ### Next Session Objective
-- **FASE 6 — EventFlow Integration Client & Publishing Pipeline**:
-  - Implement EventFlow client library for publishing ingested events to Data Plane outbox / AMQP broker.
-  - Implement W3C TraceContext propagation across HTTP / RabbitMQ message headers.
-  - Target commit: `feat: integrate eventflow`.
+- **FASE 7 — Deliveries & Attempt Tracking with DLQ Visibility**:
+  - Implement delivery status querying, attempt history timeline, and delivery filtering by status/endpoint/date range.
+  - DLQ inspection and attempt diagnostic payload viewer.
+  - Target commit: `feat: add delivery tracking`.

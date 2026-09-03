@@ -55,6 +55,14 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             });
 
             services.AddScoped<IHookBridgeDbContext>(sp => sp.GetRequiredService<HookBridgeDbContext>());
+
+            // Replace IEventFlowClient with FakeEventFlowClient for testing
+            var eventFlowDescriptor = services.FirstOrDefault(d => d.ServiceType == typeof(IEventFlowClient));
+            if (eventFlowDescriptor != null)
+            {
+                services.Remove(eventFlowDescriptor);
+            }
+            services.AddScoped<IEventFlowClient, FakeEventFlowClient>();
         });
 
         builder.UseEnvironment("Testing");

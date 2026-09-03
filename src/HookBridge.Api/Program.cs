@@ -51,6 +51,8 @@ app.MapWebhookSecretEndpoints();
 app.MapApiKeyEndpoints();
 app.MapAuditLogEndpoints();
 app.MapWebhookSignatureEndpoints();
+app.MapEventPublishingEndpoints();
+app.MapDeadLetterEndpoints();
 
 app.Run();
 

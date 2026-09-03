@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<WebhookEncryptionOptions>(configuration.GetSection(WebhookEncryptionOptions.SectionName));
         services.Configure<SsrfOptions>(configuration.GetSection(SsrfOptions.SectionName));
+        services.Configure<HookBridge.Infrastructure.Integration.EventFlowOptions>(configuration.GetSection(HookBridge.Infrastructure.Integration.EventFlowOptions.SectionName));
 
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenService, TokenService>();
@@ -35,6 +36,9 @@ public static class DependencyInjection
         services.AddSingleton<IApiKeyGenerator, KeyGenerator>();
         services.AddSingleton<ISsrfGuard, SsrfGuard>();
         services.AddSingleton<IWebhookSigner, WebhookSigner>();
+
+        // 3. EventFlow Integration HTTP Client
+        services.AddHttpClient<IEventFlowClient, HookBridge.Infrastructure.Integration.EventFlowClient>();
 
         // 3. JWT Authentication dynamically configured from IOptions<JwtOptions>
         services.AddAuthentication(options =>

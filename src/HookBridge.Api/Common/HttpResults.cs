@@ -11,6 +11,7 @@ public static class HttpResults
             return successStatusCode switch
             {
                 StatusCodes.Status201Created => Results.Created(string.Empty, result.Value),
+                StatusCodes.Status202Accepted => Results.Accepted(string.Empty, result.Value),
                 StatusCodes.Status204NoContent => Results.NoContent(),
                 _ => Results.Ok(result.Value)
             };
@@ -27,6 +28,7 @@ public static class HttpResults
             {
                 StatusCodes.Status200OK => Results.Ok(),
                 StatusCodes.Status201Created => Results.Created(),
+                StatusCodes.Status202Accepted => Results.Accepted(),
                 _ => Results.NoContent()
             };
         }

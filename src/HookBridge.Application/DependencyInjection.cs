@@ -63,6 +63,14 @@ public static class DependencyInjection
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.WebhookSigning.GenerateEndpointSignatureUseCase>();
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.WebhookSigning.VerifyEndpointSignatureUseCase>();
 
+        // Control Plane: Event Publishing Pipeline
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Publishing.PublishEventUseCase>();
+
+        // Control Plane: Dead Letter Queue Management
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.DeadLetter.PeekDeadLettersUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.DeadLetter.ReplayDeadLettersUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.DeadLetter.PurgeDeadLettersUseCase>();
+
         return services;
     }
 }
