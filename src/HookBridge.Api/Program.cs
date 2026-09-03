@@ -44,6 +44,12 @@ if (app.Environment.IsDevelopment())
 app.MapHealthEndpoints();
 app.MapDiagnosticsEndpoints();
 app.MapAuthEndpoints();
+app.MapApplicationEndpoints();
+app.MapEndpointEndpoints();
+app.MapSubscriptionEndpoints();
+app.MapWebhookSecretEndpoints();
+app.MapApiKeyEndpoints();
+app.MapAuditLogEndpoints();
 
 app.Run();
 

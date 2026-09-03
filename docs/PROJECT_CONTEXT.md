@@ -108,7 +108,7 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
 
 ---
 
-## 5. Current State & Handoff (Last Updated: 2026-09-01)
+## 5. Current State & Handoff (Last Updated: 2026-09-03)
 
 ### Completed Milestones
 1. **FASE 0 — EventFlow Contract & Boundary Analysis** (`3490ab7`)
@@ -126,11 +126,17 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
    - Refresh token entity, secure rotation, and compromise detection.
    - RBAC policies: `RequireTenantAdmin`, `RequireDeveloper`, `RequireViewer`, `RequireSystemOperator`.
    - Full test suite: 56/56 unit and integration tests passing.
+5. **FASE 4 — Control Plane** (`feat: implement webhook control plane`)
+   - CRUD and business use cases for `Applications`, `Endpoints`, `Subscriptions`, `ApiKeys`, `WebhookSecrets`, and `AuditEntries`.
+   - Cryptographic API Key issuance (`hb_live_...`, `hb_test_...`) with SHA-256 storage and scope authorization.
+   - AES-256-GCM encryption for webhook secrets at rest with versioned secret rotation and revocation.
+   - SSRF protection guard blocking private/loopback/metadata destinations.
+   - Complete audit trail ledger for all mutating control plane actions.
+   - Full test suite: 121/121 unit and integration tests passing (95 unit + 26 integration).
 
 ### Next Session Objective
-- **FASE 4 — Control Plane**:
-  - Implement CRUD and business use cases for `Applications`, `Endpoints`, `Subscriptions`, and `ApiKeys`.
-  - API Key issuance and validation with recognizable prefixes (`hb_live_...`, `hb_test_...`) and permission scopes.
-  - Webhook secret generation and secure storage.
-  - Audit log entries for all control plane actions.
-  - Target commit: `feat: implement webhook control plane`.
+- **FASE 5 — Webhook Signing**:
+  - Implement HMAC-SHA256 signature generator (`X-HookBridge-Signature: t=timestamp,v1=signature`).
+  - Secret rotation tolerance windows (dual verification against Active and Rotating secrets).
+  - Anti-replay timestamp verification.
+  - Target commit: `feat: implement webhook signing`.

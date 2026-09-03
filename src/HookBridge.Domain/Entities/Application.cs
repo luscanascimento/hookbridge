@@ -38,4 +38,13 @@ public sealed class Application : AggregateRoot<Guid>, ITenantScoped, IAuditable
             UpdatedAt = now
         });
     }
+
+    public void Update(string name, string? description, bool isActive, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        Name = name.Trim();
+        Description = description?.Trim();
+        IsActive = isActive;
+        UpdatedAt = now;
+    }
 }

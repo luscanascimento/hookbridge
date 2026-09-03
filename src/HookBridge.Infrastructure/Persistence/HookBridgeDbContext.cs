@@ -53,6 +53,24 @@ public sealed class HookBridgeDbContext : DbContext, IHookBridgeDbContext
                 method?.Invoke(this, [modelBuilder]);
             }
         }
+
+        // SQLite DateTimeOffset OrderBy Support for Integration Tests
+        if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+        {
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                var properties = entityType.ClrType.GetProperties()
+                    .Where(p => p.PropertyType == typeof(DateTimeOffset) || p.PropertyType == typeof(DateTimeOffset?));
+
+                foreach (var property in properties)
+                {
+                    modelBuilder
+                        .Entity(entityType.ClrType)
+                        .Property(property.Name)
+                        .HasConversion(new Microsoft.EntityFrameworkCore.Storage.ValueConversion.DateTimeOffsetToBinaryConverter());
+                }
+            }
+        }
     }
 
     private void ApplyTenantFilter<TEntity>(ModelBuilder modelBuilder)

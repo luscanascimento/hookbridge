@@ -36,4 +36,10 @@ public sealed class Subscription : Entity<Guid>, ITenantScoped, IAuditableEntity
             UpdatedAt = now
         });
     }
+
+    public void SetActive(bool isActive, DateTimeOffset now)
+    {
+        IsActive = isActive;
+        UpdatedAt = now;
+    }
 }

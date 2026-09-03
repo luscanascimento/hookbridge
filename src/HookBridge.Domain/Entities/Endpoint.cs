@@ -68,6 +68,16 @@ public sealed class Endpoint : AggregateRoot<Guid>, ITenantScoped, IAuditableEnt
         UpdatedAt = now;
     }
 
+    public void UpdateDetails(string targetUrl, string? description, int rateLimitPerMinute, int timeoutSeconds, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetUrl);
+        TargetUrl = targetUrl.Trim();
+        Description = description?.Trim();
+        RateLimitPerMinute = Math.Max(1, rateLimitPerMinute);
+        TimeoutSeconds = Math.Clamp(timeoutSeconds, 1, 30);
+        UpdatedAt = now;
+    }
+
     public void SetStatus(EndpointStatus status, string? reason, DateTimeOffset now)
     {
         Status = status;

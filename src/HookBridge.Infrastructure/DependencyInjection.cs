@@ -26,8 +26,14 @@ public static class DependencyInjection
 
         // 2. Cryptographic & Auth Services
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<WebhookEncryptionOptions>(configuration.GetSection(WebhookEncryptionOptions.SectionName));
+        services.Configure<SsrfOptions>(configuration.GetSection(SsrfOptions.SectionName));
+
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenService, TokenService>();
+        services.AddSingleton<ISecretEncryptor, AesSecretEncryptor>();
+        services.AddSingleton<IApiKeyGenerator, KeyGenerator>();
+        services.AddSingleton<ISsrfGuard, SsrfGuard>();
 
         // 3. JWT Authentication dynamically configured from IOptions<JwtOptions>
         services.AddAuthentication(options =>
