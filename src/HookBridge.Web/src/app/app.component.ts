@@ -4,12 +4,15 @@ import { RouterOutlet } from '@angular/router';
 import { AuthService } from './core/auth/services/auth.service';
 import { SignalRService } from './core/signalr/services/signalr.service';
 
+import { ToastContainerComponent } from './shared/components/ui/toast/toast-container.component';
+
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [CommonModule, RouterOutlet, ToastContainerComponent],
   template: `
     <router-outlet></router-outlet>
+    <app-toast-container></app-toast-container>
   `
 })
 export class AppComponent {
