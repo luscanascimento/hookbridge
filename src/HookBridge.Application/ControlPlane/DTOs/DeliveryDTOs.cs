@@ -60,6 +60,14 @@ public sealed record GetDeliveriesQuery(
     int Page = 1,
     int PageSize = 20);
 
+public sealed record TimeSeriesBucket(
+    DateTimeOffset Timestamp,
+    long Total,
+    long Success,
+    long Failed,
+    long DeadLettered,
+    double AvgLatencyMs);
+
 public sealed record DeliveryStatsResponse(
     long TotalDeliveries,
     long SuccessfulDeliveries,
@@ -67,7 +75,8 @@ public sealed record DeliveryStatsResponse(
     long PendingDeliveries,
     long DeadLetteredDeliveries,
     double SuccessRatePercentage,
-    double AverageLatencyMs);
+    double AverageLatencyMs,
+    IReadOnlyList<TimeSeriesBucket>? TimeSeries = null);
 
 public sealed record RecordDeliveryAttemptCommand(
     int? HttpStatusCode,

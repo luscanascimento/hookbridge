@@ -22,9 +22,9 @@
 | **FASE 8** | **Authorized Delivery Replay Engine** | ✅ **DONE** | `feat: add delivery replay` |
 | **FASE 9** | **SignalR Realtime Delivery Hub & Tenant Groups** | ✅ **DONE** | `feat: add realtime delivery updates` |
 | **FASE 10** | **Angular 22 Foundation (Strict TS, Zoneless, Modern Routing)** | ✅ **DONE** | `feat: add angular application foundation` (`b7d5716`) |
-| **FASE 11** | **Design System (Tailwind, Tokens, Dark Mode, Skeletons)** | ✅ **DONE** | `feat: add hookbridge design system` |
-| **FASE 12** | **Executive Dashboard (Success Rate, Latency, DLQ, Metrics)** | ⏳ *Next* | `feat: add dashboard` |
-| **FASE 13** | **Endpoint Management Portal & Secret Rotation UI** | ⬜ Pending | `feat: add endpoint management` |
+| **FASE 11** | **Design System (Tailwind, Tokens, Dark Mode, Skeletons)** | ✅ **DONE** | `feat: add hookbridge design system` (`0882737`) |
+| **FASE 12** | **Executive Dashboard (Success Rate, Latency, DLQ, Metrics)** | ✅ **DONE** | `feat: add dashboard` |
+| **FASE 13** | **Endpoint Management Portal & Secret Rotation UI** | ⏳ *Next* | `feat: add endpoint management` |
 | **FASE 14** | **Live Event Inspector & Realtime Timeline** | ⬜ Pending | `feat: add live event inspector` |
 | **FASE 15** | **Trace Explorer (Event, Delivery, Trace, Log & Audit Correlation)** | ⬜ Pending | `feat: add trace explorer` |
 | **FASE 16** | **Payload Inspector & Highlighting** | ⬜ Pending | `feat: add payload inspector` |

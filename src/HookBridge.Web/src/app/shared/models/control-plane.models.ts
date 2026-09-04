@@ -61,6 +61,15 @@ export interface Delivery {
   originalDeliveryId?: string | null;
 }
 
+export interface TimeSeriesBucket {
+  timestamp: string;
+  total: number;
+  success: number;
+  failed: number;
+  deadLettered: number;
+  avgLatencyMs: number;
+}
+
 export interface DeliveryStats {
   totalDeliveries: number;
   successfulDeliveries: number;
@@ -69,4 +78,26 @@ export interface DeliveryStats {
   deadLetteredDeliveries: number;
   successRatePercentage: number;
   averageLatencyMs: number;
+  timeSeries?: TimeSeriesBucket[];
+}
+
+export interface PagedList<T> {
+  items: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
+export interface BulkReplayDeliveriesResponse {
+  replayedCount: number;
+  replayedDeliveries: Array<{
+    deliveryId: string;
+    originalDeliveryId: string;
+    endpointId: string;
+    eventType: string;
+    status: DeliveryStatus;
+  }>;
 }

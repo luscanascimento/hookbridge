@@ -46,6 +46,37 @@ public sealed class GetDeliveryStatsUseCase
 
         var avgLatency = attempts.Count > 0 ? Math.Round(attempts.Average(), 2) : 0.0;
 
+        var now = DateTimeOffset.UtcNow;
+        var start24h = now.AddHours(-23);
+
+        var recentDeliveries = await _dbContext.Deliveries
+            .Where(d => d.TenantId == tenantId && d.CreatedAt >= start24h)
+            .Select(d => new { d.CreatedAt, d.Status })
+            .ToListAsync(cancellationToken);
+
+        var recentAttempts = await _dbContext.Attempts
+            .Where(a => a.TenantId == tenantId && a.ExecutedAt >= start24h)
+            .Select(a => new { a.ExecutedAt, a.ElapsedMs })
+            .ToListAsync(cancellationToken);
+
+        var timeSeries = new List<TimeSeriesBucket>();
+        for (int i = 0; i < 24; i++)
+        {
+            var bucketStart = new DateTimeOffset(start24h.Year, start24h.Month, start24h.Day, start24h.Hour, 0, 0, TimeSpan.Zero).AddHours(i);
+            var bucketEnd = bucketStart.AddHours(1);
+
+            var bucketDeliveries = recentDeliveries.Where(d => d.CreatedAt >= bucketStart && d.CreatedAt < bucketEnd).ToList();
+            var bucketAttempts = recentAttempts.Where(a => a.ExecutedAt >= bucketStart && a.ExecutedAt < bucketEnd).ToList();
+
+            var bTotal = bucketDeliveries.Count;
+            var bSuccess = bucketDeliveries.Count(d => d.Status == DeliveryStatus.Success);
+            var bFailed = bucketDeliveries.Count(d => d.Status == DeliveryStatus.Failed);
+            var bDeadLettered = bucketDeliveries.Count(d => d.Status == DeliveryStatus.DeadLettered);
+            var bAvgLatency = bucketAttempts.Count > 0 ? Math.Round(bucketAttempts.Average(a => a.ElapsedMs), 2) : 0.0;
+
+            timeSeries.Add(new TimeSeriesBucket(bucketStart, bTotal, bSuccess, bFailed, bDeadLettered, bAvgLatency));
+        }
+
         return Result.Success(new DeliveryStatsResponse(
             total,
             successful,
@@ -53,6 +84,7 @@ public sealed class GetDeliveryStatsUseCase
             pending,
             deadLettered,
             successRate,
-            avgLatency));
+            avgLatency,
+            timeSeries));
     }
 }
