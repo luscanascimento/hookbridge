@@ -1,26 +1,57 @@
 import { DeliveryStatus } from '../../core/signalr/models/signalr.models';
 
-export type EndpointStatus = 'Active' | 'Disabled';
+export type EndpointStatus = 'Active' | 'Paused' | 'Disabled';
+export type SecretStatus = 'Active' | 'Rotating' | 'Revoked';
 
 export interface Application {
   id: string;
   name: string;
   description?: string | null;
   createdAt: string;
-  endpointCount: number;
+  endpointCount?: number;
 }
 
 export interface Endpoint {
   id: string;
+  tenantId: string;
   applicationId: string;
   targetUrl: string;
   description?: string | null;
   status: EndpointStatus;
+  disabledReason?: string | null;
   rateLimitPerMinute: number;
   timeoutSeconds: number;
+  activeSecretPrefix?: string | null;
+  activeSecretVersion?: number;
+  subscribedEvents: string[];
   createdAt: string;
   updatedAt?: string | null;
-  subscriptionsCount: number;
+}
+
+export interface EndpointCreatedResponse extends Endpoint {
+  initialSecret: string;
+  secretPrefix: string;
+  secretVersion: number;
+}
+
+export interface WebhookSecret {
+  id: string;
+  endpointId: string;
+  keyPrefix: string;
+  version: number;
+  status: SecretStatus;
+  createdAt: string;
+  revokedAt?: string | null;
+}
+
+export interface RotateSecretResponse {
+  id: string;
+  endpointId: string;
+  newSecret: string;
+  secretPrefix: string;
+  version: number;
+  status: SecretStatus;
+  createdAt: string;
 }
 
 export interface Subscription {
