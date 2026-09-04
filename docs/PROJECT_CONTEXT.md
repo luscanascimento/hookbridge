@@ -165,17 +165,37 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
     - `IDeliveryRealtimeNotifier` abstraction in Application layer and `DeliveryRealtimeNotifier` implementation in API layer.
     - OpenTelemetry metrics tracking: `ActiveSignalRConnections` and `RealtimeEventsBroadcasted`.
     - Full test suite: 183/183 unit and integration tests passing (146 unit + 37 integration).
-11. **FASE 10 — Angular 22 Foundation (Strict TS, Zoneless, Modern Routing)** (`feat: add angular application foundation`)
+11. **FASE 10 — Angular 22 Foundation (Strict TS, Zoneless, Modern Routing)** (`b7d5716`)
     - Angular 22 SPA architecture under `src/HookBridge.Web` with `provideZonelessChangeDetection()` and standalone components.
     - Signal-driven state management with `AuthService` (`currentUser`, `token`, `tenantId`, `userRole`) and `SignalRService` (`status`, `events`, `latestEvent`).
     - Functional HTTP interceptors (`authInterceptor`, `errorInterceptor` parsing RFC 7807 ProblemDetails) and router guards (`authGuard`, `guestGuard`, `roleGuard`).
     - High-density dark mode developer portal shell layout with sidebar navigation, tenant identifier indicator, and live SignalR status indicator.
-    - Verified compilation: Clean bundle generation (356 kB raw, 94 kB gzipped) and zero TypeScript diagnostics errors.
+12. **FASE 11 — Design System (Tailwind, Tokens, Dark Mode, Skeletons & UI Components)** (`0882737`)
+    - Comprehensive UI component suite in `src/HookBridge.Web/src/app/shared/components/ui/`: `ButtonComponent`, `StatusBadgeComponent`, `SkeletonLoaderComponent`, `DataTableComponent` (sorting, pagination, typed cells), `ModalComponent` (backdrop blur, escape dismissal), `SlideOverComponent` (drawer panel), `CodeViewerComponent` (XSS-safe JSON formatter with word wrap & copy), `TabGroupComponent` & `TabComponent` (accessible keyboard navigation), `SearchFilterBarComponent` (debounced search, filter chips, refresh), `MetricCardComponent` (sparkline SVG gradient, trend percentage), and Toast Notification system (`ToastService`, `ToastContainerComponent`, `ToastComponent`).
+    - Zero compile errors and clean barrel exports in `shared/components/index.ts`.
+13. **FASE 12 — Executive Dashboard (Success Rate, Latency, DLQ, Realtime Metrics)** (`f82fa16`)
+    - Backend time-series bucket aggregation in `GetDeliveryStatsUseCase` generating 24-hour hourly slots (total, success, failed, deadLettered, avgLatencyMs).
+    - Angular frontend Executive Dashboard (`DashboardComponent`) featuring:
+      - 4 KPI metric cards with dynamic SVG sparklines (Total Deliveries, Success Rate SLA 99.9%, Average Latency, DLQ count).
+      - 24-Hour stacked SVG throughput bar chart with interactive status breakdown tooltips.
+      - Active Endpoints summary widget.
+      - Live SignalR Realtime Delivery Stream ticker with pulse indicator and event buffer.
+      - Slide-Over Drawer for live event inspection (HTTP status, latency, request payload with `CodeViewerComponent`, and one-click replay).
+14. **FASE 13 — Endpoint Management Portal & Secret Rotation UI** (`5a16ccb`)
+    - Complete Endpoint Management portal (`EndpointsComponent`) under `/endpoints` with:
+      - Search and status filter bar (`Active`, `Paused`, `Disabled`).
+      - Endpoint registration modal with application selector, HTTPS target URL, rate limit, timeout, and wildcard event subscriptions (`order.*`, `invoice.paid`, `*`).
+      - One-time HMAC signing secret modal (`whsec_...`) with one-click clipboard copy.
+      - Zero-downtime dual-key secret rotation modal (`RotateSecretResponse`) displaying key history, version, and status (`Active`, `Rotating`, `Revoked`).
+      - Endpoint edit modal (URL, rate limit, timeout, description), status toggling, and deletion modal with cascade confirmation.
+      - Full integration with `EndpointService` and `ToastService`.
 
 ### Next Session Objective
-- **FASE 11 — Design System (Tailwind, Tokens, Dark Mode, Skeletons)**:
-  - Implement full design system components: Data Tables with sorting/pagination, Modal Dialogs (CDK), Code Highlight Blocks with JSON copy, Tab Panels, Search & Filter bars, Metric Sparklines.
-  - Target commit: `feat: add hookbridge design system`.
+- **FASE 14 — Live Event Inspector & Realtime Timeline**:
+  - Implement full-screen dedicated Realtime Event Timeline & Delivery Stream portal (`/events` or `/live`).
+  - Filtering by event type, status, endpoint, and payload content.
+  - Interactive timeline view with detailed request/response attempt breadcrumbs and trace correlation.
+  - Target commit: `feat: add live event inspector`.
 
 
 
