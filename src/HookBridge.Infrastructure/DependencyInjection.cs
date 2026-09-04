@@ -68,6 +68,21 @@ public static class DependencyInjection
                     ClockSkew = TimeSpan.FromSeconds(30),
                     RoleClaimType = ClaimTypes.Role
                 };
+
+                // Enable JWT authentication for WebSocket / SignalR connections via query parameter (?access_token=...)
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
         // 4. Role-Based Authorization Policies

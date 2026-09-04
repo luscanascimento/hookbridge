@@ -158,11 +158,19 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
    - Full ancestry and descendant replay lineage tracking (`GET /api/v1/deliveries/{id}/lineage` and `OriginalDeliveryId` link).
    - Integration with EventFlow transactional event ingestion, audit logging (`Delivery.Replayed`, `Delivery.BulkReplayed`), and OpenTelemetry metric updates (`HookBridgeDiagnostics.ReplaysTriggered`).
    - Full test suite: 167/167 unit and integration tests passing (135 unit + 32 integration).
+10. **FASE 9 — SignalR Realtime Delivery Hub & Tenant Groups** (`feat: add realtime delivery updates`)
+    - SignalR hub for live delivery events strictly scoped to authenticated tenant groups (`/hubs/deliveries`).
+    - WebSocket JWT token extraction via query parameter `?access_token=...` during WebSocket handshake.
+    - Tenant-isolated and endpoint/application granular group subscription engine (`SubscribeToEndpoint`, `SubscribeToApplication`).
+    - `IDeliveryRealtimeNotifier` abstraction in Application layer and `DeliveryRealtimeNotifier` implementation in API layer.
+    - OpenTelemetry metrics tracking: `ActiveSignalRConnections` and `RealtimeEventsBroadcasted`.
+    - Full test suite: 183/183 unit and integration tests passing (146 unit + 37 integration).
 
 ### Next Session Objective
-- **FASE 9 — SignalR Realtime Delivery Hub & Tenant Groups**:
-  - Implement SignalR hub for live delivery events scoped to authenticated tenant groups (`/hubs/deliveries`).
-  - Broadcast delivery lifecycle transitions (Dispatched, Success, Failed, Replayed) to connected developer portals in real time.
-  - SignalR connection metrics (`HookBridgeDiagnostics.ActiveSignalRConnections`).
-  - Target commit: `feat: add realtime delivery updates`.
+- **FASE 10 — Angular 22 Foundation (Strict TS, Zoneless, Modern Routing)**:
+  - Initialize and structure the Angular 22 frontend application for the HookBridge developer portal.
+  - Configure strict TypeScript mode, zoneless change detection compatibility, standalone components, modern routing, and functional HTTP interceptors.
+  - Setup core layouts, authentication state management (Signals), and SignalR hub client integration service.
+  - Target commit: `feat: add angular application foundation`.
+
 

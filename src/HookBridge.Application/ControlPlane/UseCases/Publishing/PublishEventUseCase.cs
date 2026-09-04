@@ -20,6 +20,7 @@ public sealed class PublishEventUseCase
     private readonly IEventFlowClient _eventFlowClient;
     private readonly IValidator<PublishEventCommand> _validator;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IDeliveryRealtimeNotifier _realtimeNotifier;
 
     public PublishEventUseCase(
         IHookBridgeDbContext dbContext,
@@ -27,7 +28,8 @@ public sealed class PublishEventUseCase
         ICurrentUser currentUser,
         IEventFlowClient eventFlowClient,
         IValidator<PublishEventCommand> validator,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IDeliveryRealtimeNotifier? realtimeNotifier = null)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
@@ -35,6 +37,7 @@ public sealed class PublishEventUseCase
         _eventFlowClient = eventFlowClient;
         _validator = validator;
         _dateTimeProvider = dateTimeProvider;
+        _realtimeNotifier = realtimeNotifier ?? NullDeliveryRealtimeNotifier.Instance;
     }
 
     public async Task<Result<PublishEventResponse>> ExecuteAsync(PublishEventCommand command, CancellationToken cancellationToken = default)
@@ -133,6 +136,12 @@ public sealed class PublishEventUseCase
         _dbContext.AuditEntries.Add(audit);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Emit realtime SignalR delivery notifications
+        foreach (var delivery in deliveriesCreated)
+        {
+            await _realtimeNotifier.NotifyDeliveryDispatchedAsync(delivery, cancellationToken);
+        }
 
         // Record metrics
         HookBridgeDiagnostics.DeliveriesDispatched.Add(deliveriesCreated.Count);

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using FluentValidation;
 using HookBridge.Application.Abstractions;
+using HookBridge.Application.Common;
 using HookBridge.Application.ControlPlane.DTOs;
 using HookBridge.Application.Integration.DTOs;
 using HookBridge.Domain.Common;
@@ -20,6 +21,7 @@ public sealed class ReplayDeliveryUseCase
     private readonly IEventFlowClient _eventFlowClient;
     private readonly IValidator<ReplayDeliveryCommand> _validator;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IDeliveryRealtimeNotifier _realtimeNotifier;
 
     public ReplayDeliveryUseCase(
         IHookBridgeDbContext dbContext,
@@ -27,7 +29,8 @@ public sealed class ReplayDeliveryUseCase
         ICurrentUser currentUser,
         IEventFlowClient eventFlowClient,
         IValidator<ReplayDeliveryCommand> validator,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IDeliveryRealtimeNotifier? realtimeNotifier = null)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
@@ -35,6 +38,7 @@ public sealed class ReplayDeliveryUseCase
         _eventFlowClient = eventFlowClient;
         _validator = validator;
         _dateTimeProvider = dateTimeProvider;
+        _realtimeNotifier = realtimeNotifier ?? NullDeliveryRealtimeNotifier.Instance;
     }
 
     public async Task<Result<ReplayDeliveryResponse>> ExecuteAsync(
@@ -192,6 +196,9 @@ public sealed class ReplayDeliveryUseCase
         _dbContext.AuditEntries.Add(audit);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Emit realtime SignalR delivery replayed notification
+        await _realtimeNotifier.NotifyDeliveryReplayedAsync(newDelivery, originalDelivery.Id, cancellationToken);
 
         HookBridgeDiagnostics.ReplaysTriggered.Add(1);
         HookBridgeDiagnostics.DeliveriesDispatched.Add(1);

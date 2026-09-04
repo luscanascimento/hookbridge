@@ -53,4 +53,9 @@ public static class HookBridgeDiagnostics
         name: "hookbridge.signalr.active_connections",
         unit: "{connection}",
         description: "Current number of active authenticated SignalR live inspection connections");
+
+    public static readonly Counter<long> RealtimeEventsBroadcasted = Meter.CreateCounter<long>(
+        name: "hookbridge.signalr.events_broadcasted",
+        unit: "{event}",
+        description: "Total number of realtime delivery notifications broadcasted over SignalR");
 }

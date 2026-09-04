@@ -1,4 +1,5 @@
 using HookBridge.Application.Abstractions;
+using HookBridge.Application.Common;
 using HookBridge.Application.ControlPlane.DTOs;
 using HookBridge.Domain.Common;
 using HookBridge.Domain.Diagnostics;
@@ -13,15 +14,18 @@ public sealed class RecordDeliveryAttemptUseCase
     private readonly IHookBridgeDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IDeliveryRealtimeNotifier _realtimeNotifier;
 
     public RecordDeliveryAttemptUseCase(
         IHookBridgeDbContext dbContext,
         ITenantContext tenantContext,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IDeliveryRealtimeNotifier? realtimeNotifier = null)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
         _dateTimeProvider = dateTimeProvider;
+        _realtimeNotifier = realtimeNotifier ?? NullDeliveryRealtimeNotifier.Instance;
     }
 
     public async Task<Result<AttemptResponse>> ExecuteAsync(Guid deliveryId, RecordDeliveryAttemptCommand command, CancellationToken cancellationToken = default)
@@ -88,6 +92,9 @@ public sealed class RecordDeliveryAttemptUseCase
         HookBridgeDiagnostics.DeliveryLatency.Record(command.ElapsedMs);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Emit realtime SignalR delivery attempt notification
+        await _realtimeNotifier.NotifyDeliveryAttemptRecordedAsync(delivery, attempt, cancellationToken);
 
         return Result.Success(new AttemptResponse(
             attempt.Id,

@@ -18,5 +18,6 @@ public class HookBridgeDiagnosticsTests
         HookBridgeDiagnostics.DeliveriesFailed.Should().NotBeNull();
         HookBridgeDiagnostics.DeliveryLatency.Should().NotBeNull();
         HookBridgeDiagnostics.ActiveSignalRConnections.Should().NotBeNull();
+        HookBridgeDiagnostics.RealtimeEventsBroadcasted.Should().NotBeNull();
     }
 }

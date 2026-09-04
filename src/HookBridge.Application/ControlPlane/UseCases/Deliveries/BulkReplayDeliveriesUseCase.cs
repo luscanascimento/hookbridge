@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using FluentValidation;
 using HookBridge.Application.Abstractions;
+using HookBridge.Application.Common;
 using HookBridge.Application.ControlPlane.DTOs;
 using HookBridge.Application.Integration.DTOs;
 using HookBridge.Domain.Common;
@@ -20,6 +21,7 @@ public sealed class BulkReplayDeliveriesUseCase
     private readonly IEventFlowClient _eventFlowClient;
     private readonly IValidator<BulkReplayDeliveriesCommand> _validator;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IDeliveryRealtimeNotifier _realtimeNotifier;
 
     public BulkReplayDeliveriesUseCase(
         IHookBridgeDbContext dbContext,
@@ -27,7 +29,8 @@ public sealed class BulkReplayDeliveriesUseCase
         ICurrentUser currentUser,
         IEventFlowClient eventFlowClient,
         IValidator<BulkReplayDeliveriesCommand> validator,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IDeliveryRealtimeNotifier? realtimeNotifier = null)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
@@ -35,6 +38,7 @@ public sealed class BulkReplayDeliveriesUseCase
         _eventFlowClient = eventFlowClient;
         _validator = validator;
         _dateTimeProvider = dateTimeProvider;
+        _realtimeNotifier = realtimeNotifier ?? NullDeliveryRealtimeNotifier.Instance;
     }
 
     public async Task<Result<BulkReplayDeliveriesResponse>> ExecuteAsync(
@@ -131,6 +135,7 @@ public sealed class BulkReplayDeliveriesUseCase
 
         var now = _dateTimeProvider.UtcNow;
         var replayedResponses = new List<ReplayDeliveryResponse>();
+        var newDeliveries = new List<Delivery>();
 
         foreach (var orig in sourceDeliveries)
         {
@@ -185,6 +190,7 @@ public sealed class BulkReplayDeliveriesUseCase
 
             var newDelivery = newDeliveryResult.Value;
             _dbContext.Deliveries.Add(newDelivery);
+            newDeliveries.Add(newDelivery);
 
             var metadata = new Dictionary<string, string>
             {
@@ -247,6 +253,12 @@ public sealed class BulkReplayDeliveriesUseCase
         _dbContext.AuditEntries.Add(audit);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Emit realtime SignalR bulk replay notifications
+        if (newDeliveries.Count > 0)
+        {
+            await _realtimeNotifier.NotifyBulkDeliveriesReplayedAsync(tenantId, newDeliveries, cancellationToken);
+        }
 
         HookBridgeDiagnostics.ReplaysTriggered.Add(replayedResponses.Count);
         HookBridgeDiagnostics.DeliveriesDispatched.Add(replayedResponses.Count);

@@ -1,6 +1,8 @@
 using HookBridge.Api.Endpoints;
+using HookBridge.Api.Hubs;
 using HookBridge.Api.Middleware;
 using HookBridge.Application;
+using HookBridge.Application.Abstractions;
 using HookBridge.Infrastructure;
 using Scalar.AspNetCore;
 
@@ -10,11 +12,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
-// 2. Exception Handling & RFC 7807 ProblemDetails
+// 2. Register SignalR & Realtime Delivery Notifier
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IDeliveryRealtimeNotifier, DeliveryRealtimeNotifier>();
+
+// 3. Exception Handling & RFC 7807 ProblemDetails
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-// 3. OpenAPI 3.1 Documentation
+// 4. OpenAPI 3.1 Documentation
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -54,6 +60,9 @@ app.MapWebhookSignatureEndpoints();
 app.MapEventPublishingEndpoints();
 app.MapDeadLetterEndpoints();
 app.MapDeliveryEndpoints();
+
+// 8. Map Real-time SignalR Hubs
+app.MapHub<DeliveryHub>("/hubs/deliveries");
 
 app.Run();
 
