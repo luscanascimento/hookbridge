@@ -146,16 +146,23 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
    - DLQ management use cases and endpoints (Peek, Replay, Purge) for control plane dead-letter governance.
    - W3C TraceContext propagation across HTTP headers and distributed activities (`HookBridge.PublishEvent`).
    - Full test suite: 154/154 unit and integration tests passing.
-8. **FASE 7 — Deliveries & Attempt Tracking with DLQ Visibility** (`feat: add delivery tracking`)
+8. **FASE 7 — Deliveries & Attempt Tracking with DLQ Visibility** (`69cb4e1`)
    - Paginated delivery querying with multidimensional filters (endpoint, status, event type, date range, correlation ID).
    - Detailed delivery inspection endpoint with complete historical attempts execution timeline.
    - Real-time aggregate statistics endpoint (total, success, failed, pending, DLQ count, success rate %, average latency ms).
    - Delivery attempt recorder with status transitions (`Dispatched`, `Success`, `Failed`, `DeadLettered`) and OpenTelemetry metric updates.
-   - Full test suite: 158/158 unit and integration tests passing (128 unit + 30 integration).
+   - Full test suite: 158/158 unit and integration tests passing.
+9. **FASE 8 — Authorized Delivery Replay Engine** (`feat: add delivery replay`)
+   - Single delivery replay (`POST /api/v1/deliveries/{id}/replay`) with endpoint pre-validation and latest payload retrieval.
+   - Bulk delivery replay (`POST /api/v1/deliveries/replay`) supporting batch re-execution by status, endpoint, event type, and explicit IDs.
+   - Full ancestry and descendant replay lineage tracking (`GET /api/v1/deliveries/{id}/lineage` and `OriginalDeliveryId` link).
+   - Integration with EventFlow transactional event ingestion, audit logging (`Delivery.Replayed`, `Delivery.BulkReplayed`), and OpenTelemetry metric updates (`HookBridgeDiagnostics.ReplaysTriggered`).
+   - Full test suite: 167/167 unit and integration tests passing (135 unit + 32 integration).
 
 ### Next Session Objective
-- **FASE 8 — Authorized Delivery Replay Engine**:
-  - Implement single delivery replay (`POST /api/v1/deliveries/{id}/replay`).
-  - Implement bulk delivery replay with query filters (`POST /api/v1/deliveries/replay`).
-  - Replay lineage tracking (`OriginalDeliveryId` link, immutable audit history).
-  - Target commit: `feat: add delivery replay`.
+- **FASE 9 — SignalR Realtime Delivery Hub & Tenant Groups**:
+  - Implement SignalR hub for live delivery events scoped to authenticated tenant groups (`/hubs/deliveries`).
+  - Broadcast delivery lifecycle transitions (Dispatched, Success, Failed, Replayed) to connected developer portals in real time.
+  - SignalR connection metrics (`HookBridgeDiagnostics.ActiveSignalRConnections`).
+  - Target commit: `feat: add realtime delivery updates`.
+

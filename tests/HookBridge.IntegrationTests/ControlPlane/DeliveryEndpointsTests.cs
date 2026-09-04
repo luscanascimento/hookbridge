@@ -81,4 +81,101 @@ public class DeliveryEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         stats.SuccessRatePercentage.Should().Be(100.0);
         stats.AverageLatencyMs.Should().Be(25.0);
     }
+
+    [Fact]
+    public async Task Delivery_Single_Replay_And_Lineage_Tracking()
+    {
+        // Arrange
+        var slug = $"rep-{Guid.NewGuid():N}"[..16];
+        var regRes = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterTenantCommand(
+            slug, "Replay Org", $"{slug}@test.com", "Password#2026"));
+        var auth = await regRes.Content.ReadFromJsonAsync<AuthResponse>(JsonOptions);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+
+        var appRes = await _client.PostAsJsonAsync("/api/v1/apps", new CreateApplicationCommand("Replay App", null));
+        var app = await appRes.Content.ReadFromJsonAsync<ApplicationResponse>(JsonOptions);
+
+        var epRes = await _client.PostAsJsonAsync("/api/v1/endpoints", new CreateEndpointCommand(
+            app!.Id, "https://api.github.com/webhook", "Replay EP", 600, 15, new List<string> { "payment.*" }));
+        var ep = await epRes.Content.ReadFromJsonAsync<EndpointCreatedResponse>(JsonOptions);
+
+        // 1. Publish Event to create Delivery #1
+        var payload = JsonDocument.Parse("{\"paymentId\":\"pay_555\",\"amount\":120.00}").RootElement;
+        var pubRes = await _client.PostAsJsonAsync("/api/v1/events", new PublishEventCommand("payment.failed", payload));
+        pubRes.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+        var listRes = await _client.GetAsync("/api/v1/deliveries");
+        var paged = await listRes.Content.ReadFromJsonAsync<PagedList<DeliveryResponse>>(JsonOptions);
+        var originalDeliveryId = paged!.Items[0].Id;
+
+        // 2. Record failed attempt on original delivery
+        await _client.PostAsJsonAsync($"/api/v1/deliveries/{originalDeliveryId}/attempts", new RecordDeliveryAttemptCommand(
+            504, "{}", "{\"paymentId\":\"pay_555\"}", null, null, 10000, "Gateway Timeout", DeliveryStatus.Failed));
+
+        // 3. Trigger Single Replay
+        var replayRes = await _client.PostAsJsonAsync($"/api/v1/deliveries/{originalDeliveryId}/replay", new ReplayDeliveryCommand());
+        replayRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var replay = await replayRes.Content.ReadFromJsonAsync<ReplayDeliveryResponse>(JsonOptions);
+        replay.Should().NotBeNull();
+        replay!.OriginalDeliveryId.Should().Be(originalDeliveryId);
+        replay.DeliveryId.Should().NotBe(originalDeliveryId);
+        replay.Status.Should().Be(DeliveryStatus.Pending);
+
+        // 4. Query Delivery Lineage
+        var lineageRes = await _client.GetAsync($"/api/v1/deliveries/{replay.DeliveryId}/lineage");
+        lineageRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var lineage = await lineageRes.Content.ReadFromJsonAsync<DeliveryLineageResponse>(JsonOptions);
+        lineage.Should().NotBeNull();
+        lineage!.RootDeliveryId.Should().Be(originalDeliveryId);
+        lineage.LineageChain.Should().HaveCount(2);
+        lineage.LineageChain[0].Id.Should().Be(originalDeliveryId);
+        lineage.LineageChain[1].Id.Should().Be(replay.DeliveryId);
+    }
+
+    [Fact]
+    public async Task Delivery_Bulk_Replay_Failed_Deliveries()
+    {
+        // Arrange
+        var slug = $"blk-{Guid.NewGuid():N}"[..16];
+        var regRes = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterTenantCommand(
+            slug, "Bulk Org", $"{slug}@test.com", "Password#2026"));
+        var auth = await regRes.Content.ReadFromJsonAsync<AuthResponse>(JsonOptions);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
+
+        var appRes = await _client.PostAsJsonAsync("/api/v1/apps", new CreateApplicationCommand("Bulk App", null));
+        var app = await appRes.Content.ReadFromJsonAsync<ApplicationResponse>(JsonOptions);
+
+        var epRes = await _client.PostAsJsonAsync("/api/v1/endpoints", new CreateEndpointCommand(
+            app!.Id, "https://api.github.com/webhook", "Bulk EP", 600, 15, new List<string> { "order.*" }));
+        var ep = await epRes.Content.ReadFromJsonAsync<EndpointCreatedResponse>(JsonOptions);
+
+        // Publish 3 events
+        for (int i = 1; i <= 3; i++)
+        {
+            var payload = JsonDocument.Parse($"{{\"orderId\":{i}}}").RootElement;
+            await _client.PostAsJsonAsync("/api/v1/events", new PublishEventCommand("order.placed", payload));
+        }
+
+        var listRes = await _client.GetAsync("/api/v1/deliveries?pageSize=10");
+        var paged = await listRes.Content.ReadFromJsonAsync<PagedList<DeliveryResponse>>(JsonOptions);
+        paged!.Items.Should().HaveCount(3);
+
+        // Mark 2 failed, 1 success
+        await _client.PostAsJsonAsync($"/api/v1/deliveries/{paged.Items[0].Id}/attempts", new RecordDeliveryAttemptCommand(
+            500, "{}", "{}", null, null, 100, "Error", DeliveryStatus.Failed));
+        await _client.PostAsJsonAsync($"/api/v1/deliveries/{paged.Items[1].Id}/attempts", new RecordDeliveryAttemptCommand(
+            500, "{}", "{}", null, null, 100, "Error", DeliveryStatus.Failed));
+        await _client.PostAsJsonAsync($"/api/v1/deliveries/{paged.Items[2].Id}/attempts", new RecordDeliveryAttemptCommand(
+            200, "{}", "{}", null, null, 50, null, DeliveryStatus.Success));
+
+        // Act - Bulk Replay with default filter (Failed/DeadLettered)
+        var bulkRes = await _client.PostAsJsonAsync("/api/v1/deliveries/replay", new BulkReplayDeliveriesCommand());
+        bulkRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var bulk = await bulkRes.Content.ReadFromJsonAsync<BulkReplayDeliveriesResponse>(JsonOptions);
+
+        // Assert
+        bulk.Should().NotBeNull();
+        bulk!.ReplayedCount.Should().Be(2);
+        bulk.ReplayedDeliveries.Should().HaveCount(2);
+    }
 }

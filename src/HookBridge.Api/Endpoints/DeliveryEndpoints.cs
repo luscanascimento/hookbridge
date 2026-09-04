@@ -91,6 +91,53 @@ public static class DeliveryEndpoints
         .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
         .Produces<ProblemDetails>(StatusCodes.Status404NotFound);
 
+        // 5. Replay Single Delivery
+        group.MapPost("/{id:guid}/replay", async (
+            [FromRoute] Guid id,
+            [FromBody] ReplayDeliveryCommand? command,
+            [FromServices] ReplayDeliveryUseCase useCase,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await useCase.ExecuteAsync(id, command, cancellationToken);
+            return HttpResults.Match(result, StatusCodes.Status200OK);
+        })
+        .WithName("ReplayDelivery")
+        .WithSummary("Safely replays an existing webhook delivery with new cryptographic signature headers while preserving lineage.")
+        .RequireAuthorization(AuthorizationPolicies.RequireDeveloper)
+        .Produces<ReplayDeliveryResponse>(StatusCodes.Status200OK)
+        .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
+        .Produces<ProblemDetails>(StatusCodes.Status404NotFound);
+
+        // 6. Bulk Replay Deliveries
+        group.MapPost("/replay", async (
+            [FromBody] BulkReplayDeliveriesCommand command,
+            [FromServices] BulkReplayDeliveriesUseCase useCase,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await useCase.ExecuteAsync(command, cancellationToken);
+            return HttpResults.Match(result, StatusCodes.Status200OK);
+        })
+        .WithName("BulkReplayDeliveries")
+        .WithSummary("Replays batches of failed or filtered deliveries asynchronously via EventFlow.")
+        .RequireAuthorization(AuthorizationPolicies.RequireDeveloper)
+        .Produces<BulkReplayDeliveriesResponse>(StatusCodes.Status200OK)
+        .Produces<ProblemDetails>(StatusCodes.Status400BadRequest);
+
+        // 7. Get Delivery Lineage
+        group.MapGet("/{id:guid}/lineage", async (
+            [FromRoute] Guid id,
+            [FromServices] GetDeliveryLineageUseCase useCase,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await useCase.ExecuteAsync(id, cancellationToken);
+            return HttpResults.Match(result, StatusCodes.Status200OK);
+        })
+        .WithName("GetDeliveryLineage")
+        .WithSummary("Retrieves the full ancestry chain and child replays for a given delivery.")
+        .RequireAuthorization(AuthorizationPolicies.RequireViewer)
+        .Produces<DeliveryLineageResponse>(StatusCodes.Status200OK)
+        .Produces<ProblemDetails>(StatusCodes.Status404NotFound);
+
         return app;
     }
 }

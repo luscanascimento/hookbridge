@@ -78,3 +78,34 @@ public sealed record RecordDeliveryAttemptCommand(
     long ElapsedMs,
     string? ErrorMessage,
     DeliveryStatus FinalStatus);
+
+public sealed record ReplayDeliveryCommand(
+    Guid? OverrideEndpointId = null);
+
+public sealed record ReplayDeliveryResponse(
+    Guid DeliveryId,
+    Guid OriginalDeliveryId,
+    Guid EndpointId,
+    string EventType,
+    DeliveryStatus Status,
+    DateTimeOffset ScheduledAt,
+    string TraceParent,
+    string CorrelationId);
+
+public sealed record BulkReplayDeliveriesCommand(
+    IReadOnlyList<Guid>? DeliveryIds = null,
+    Guid? EndpointId = null,
+    DeliveryStatus? Status = null,
+    string? EventType = null,
+    DateTimeOffset? FromDate = null,
+    DateTimeOffset? ToDate = null,
+    int? MaxCount = 50);
+
+public sealed record BulkReplayDeliveriesResponse(
+    int ReplayedCount,
+    IReadOnlyList<ReplayDeliveryResponse> ReplayedDeliveries);
+
+public sealed record DeliveryLineageResponse(
+    Guid RootDeliveryId,
+    IReadOnlyList<DeliveryResponse> LineageChain);
+

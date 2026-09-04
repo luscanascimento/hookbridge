@@ -42,6 +42,7 @@ public sealed class DeliveryConfiguration : IEntityTypeConfiguration<Delivery>
         builder.HasIndex(d => d.TenantId);
         builder.HasIndex(d => d.EventId);
         builder.HasIndex(d => d.EndpointId);
+        builder.HasIndex(d => d.OriginalDeliveryId);
         builder.HasIndex(d => new { d.TenantId, d.Status, d.ScheduledAt });
 
         builder.HasMany(d => d.Attempts)

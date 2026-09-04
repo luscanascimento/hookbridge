@@ -3,7 +3,7 @@
 > **Target Cadence:** ~2 phases per day  
 > **Repository:** `git@github.com:luscanascimento/hookbridge.git`  
 > **Current Date:** 2026-09-03  
-> **Status:** Phases 0 through 7 Completed, Phase 8 Next  
+> **Status:** Phases 0 through 8 Completed, Phase 9 Next  
 
 ---
 
@@ -18,9 +18,9 @@
 | **FASE 4** | **Control Plane (Apps, Endpoints, Subscriptions, API Keys, Secrets)** | ✅ **DONE** | `feat: implement webhook control plane` (`3c5d10e`) |
 | **FASE 5** | **Webhook Signing (HMAC-SHA256, Secret Rotation, Anti-Replay)** | ✅ **DONE** | `feat: implement webhook signing` (`c433848`) |
 | **FASE 6** | **EventFlow Integration Client & Publishing Pipeline** | ✅ **DONE** | `feat: integrate eventflow` (`ef6b50c`) |
-| **FASE 7** | **Deliveries & Attempt Tracking with DLQ Visibility** | ✅ **DONE** | `feat: add delivery tracking` |
-| **FASE 8** | **Authorized Delivery Replay Engine** | ⏳ *Next* | `feat: add delivery replay` |
-| **FASE 9** | **SignalR Realtime Delivery Hub & Tenant Groups** | ⬜ Pending | `feat: add realtime delivery updates` |
+| **FASE 7** | **Deliveries & Attempt Tracking with DLQ Visibility** | ✅ **DONE** | `feat: add delivery tracking` (`69cb4e1`) |
+| **FASE 8** | **Authorized Delivery Replay Engine** | ✅ **DONE** | `feat: add delivery replay` |
+| **FASE 9** | **SignalR Realtime Delivery Hub & Tenant Groups** | ⏳ *Next* | `feat: add realtime delivery updates` |
 | **FASE 10** | **Angular 22 Foundation (Strict TS, Zoneless, Modern Routing)** | ⬜ Pending | `feat: add angular application foundation` |
 | **FASE 11** | **Design System (Tailwind, Tokens, Dark Mode, Skeletons)** | ⬜ Pending | `feat: add hookbridge design system` |
 | **FASE 12** | **Executive Dashboard (Success Rate, Latency, DLQ, Metrics)** | ⬜ Pending | `feat: add dashboard` |

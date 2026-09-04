@@ -76,6 +76,9 @@ public static class DependencyInjection
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Deliveries.GetDeliveryByIdUseCase>();
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Deliveries.GetDeliveryStatsUseCase>();
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Deliveries.RecordDeliveryAttemptUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Deliveries.ReplayDeliveryUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Deliveries.BulkReplayDeliveriesUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Deliveries.GetDeliveryLineageUseCase>();
 
         return services;
     }
