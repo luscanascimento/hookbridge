@@ -21,8 +21,8 @@
 | **FASE 7** | **Deliveries & Attempt Tracking with DLQ Visibility** | ✅ **DONE** | `feat: add delivery tracking` (`69cb4e1`) |
 | **FASE 8** | **Authorized Delivery Replay Engine** | ✅ **DONE** | `feat: add delivery replay` |
 | **FASE 9** | **SignalR Realtime Delivery Hub & Tenant Groups** | ✅ **DONE** | `feat: add realtime delivery updates` |
-| **FASE 10** | **Angular 22 Foundation (Strict TS, Zoneless, Modern Routing)** | ⏳ *Next* | `feat: add angular application foundation` |
-| **FASE 11** | **Design System (Tailwind, Tokens, Dark Mode, Skeletons)** | ⬜ Pending | `feat: add hookbridge design system` |
+| **FASE 10** | **Angular 22 Foundation (Strict TS, Zoneless, Modern Routing)** | ✅ **DONE** | `feat: add angular application foundation` |
+| **FASE 11** | **Design System (Tailwind, Tokens, Dark Mode, Skeletons)** | ⏳ *Next* | `feat: add hookbridge design system` |
 | **FASE 12** | **Executive Dashboard (Success Rate, Latency, DLQ, Metrics)** | ⬜ Pending | `feat: add dashboard` |
 | **FASE 13** | **Endpoint Management Portal & Secret Rotation UI** | ⬜ Pending | `feat: add endpoint management` |
 | **FASE 14** | **Live Event Inspector & Realtime Timeline** | ⬜ Pending | `feat: add live event inspector` |

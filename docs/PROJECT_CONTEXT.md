@@ -165,12 +165,17 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
     - `IDeliveryRealtimeNotifier` abstraction in Application layer and `DeliveryRealtimeNotifier` implementation in API layer.
     - OpenTelemetry metrics tracking: `ActiveSignalRConnections` and `RealtimeEventsBroadcasted`.
     - Full test suite: 183/183 unit and integration tests passing (146 unit + 37 integration).
+11. **FASE 10 — Angular 22 Foundation (Strict TS, Zoneless, Modern Routing)** (`feat: add angular application foundation`)
+    - Angular 22 SPA architecture under `src/HookBridge.Web` with `provideZonelessChangeDetection()` and standalone components.
+    - Signal-driven state management with `AuthService` (`currentUser`, `token`, `tenantId`, `userRole`) and `SignalRService` (`status`, `events`, `latestEvent`).
+    - Functional HTTP interceptors (`authInterceptor`, `errorInterceptor` parsing RFC 7807 ProblemDetails) and router guards (`authGuard`, `guestGuard`, `roleGuard`).
+    - High-density dark mode developer portal shell layout with sidebar navigation, tenant identifier indicator, and live SignalR status indicator.
+    - Verified compilation: Clean bundle generation (356 kB raw, 94 kB gzipped) and zero TypeScript diagnostics errors.
 
 ### Next Session Objective
-- **FASE 10 — Angular 22 Foundation (Strict TS, Zoneless, Modern Routing)**:
-  - Initialize and structure the Angular 22 frontend application for the HookBridge developer portal.
-  - Configure strict TypeScript mode, zoneless change detection compatibility, standalone components, modern routing, and functional HTTP interceptors.
-  - Setup core layouts, authentication state management (Signals), and SignalR hub client integration service.
-  - Target commit: `feat: add angular application foundation`.
+- **FASE 11 — Design System (Tailwind, Tokens, Dark Mode, Skeletons)**:
+  - Implement full design system components: Data Tables with sorting/pagination, Modal Dialogs (CDK), Code Highlight Blocks with JSON copy, Tab Panels, Search & Filter bars, Metric Sparklines.
+  - Target commit: `feat: add hookbridge design system`.
+
 
 
