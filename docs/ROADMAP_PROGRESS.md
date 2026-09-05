@@ -26,7 +26,7 @@
 | **FASE 12** | **Executive Dashboard (Success Rate, Latency, DLQ, Metrics)** | ✅ **DONE** | `feat: add dashboard` (`f82fa16`) |
 | **FASE 13** | **Endpoint Management Portal & Secret Rotation UI** | ✅ **DONE** | `feat: add endpoint management` (`5a16ccb`) |
 | **FASE 14** | **Live Event Inspector & Realtime Timeline** | ✅ **DONE** | `feat: add live event inspector` (`08a24a5`) |
-| **FASE 15** | **Trace Explorer (Event, Delivery, Trace, Log & Audit Correlation)** | ✅ **DONE** | `feat: add trace explorer` |
+| **FASE 15** | **Trace Explorer (Event, Delivery, Trace, Log & Audit Correlation)** | ✅ **DONE** | `feat: add trace explorer` (`d788a88`) |
 | **FASE 16** | **Payload Inspector & Highlighting** | ⏳ *Next* | `feat: add payload inspector` |
 | **FASE 17** | **Endpoint Health & Reliability Metrics** | ⬜ Pending | `feat: add endpoint health metrics` |
 | **FASE 18** | **Event Schemas, Versioning & Compatibility** | ⬜ Pending | `feat: add event schema management` |
