@@ -17,7 +17,8 @@ public sealed record DeliveryResponse(
     string CorrelationId,
     Guid? OriginalDeliveryId,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? UpdatedAt);
+    DateTimeOffset? UpdatedAt,
+    string? EndpointUrl = null);
 
 public sealed record AttemptResponse(
     Guid Id,
@@ -48,7 +49,8 @@ public sealed record DeliveryDetailResponse(
     Guid? OriginalDeliveryId,
     DateTimeOffset CreatedAt,
     DateTimeOffset? UpdatedAt,
-    IReadOnlyList<AttemptResponse> Attempts);
+    IReadOnlyList<AttemptResponse> Attempts,
+    string? EndpointUrl = null);
 
 public sealed record GetDeliveriesQuery(
     Guid? EndpointId = null,

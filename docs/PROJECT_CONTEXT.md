@@ -189,13 +189,26 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
       - Zero-downtime dual-key secret rotation modal (`RotateSecretResponse`) displaying key history, version, and status (`Active`, `Rotating`, `Revoked`).
       - Endpoint edit modal (URL, rate limit, timeout, description), status toggling, and deletion modal with cascade confirmation.
       - Full integration with `EndpointService` and `ToastService`.
+15. **FASE 14 — Live Event Inspector & Realtime Timeline** (`feat: add live event inspector`)
+    - Full-screen Live Event Inspector and Webhook Delivery Timeline (`DeliveriesComponent`) accessible via `/deliveries`, `/live`, and `/events`.
+    - Real-time SignalR live streaming engine with Pause / Resume controls, unread queued events counter, clear buffer, and fast filters (Status, Endpoint, Wildcard Event Type).
+    - Historical Log & Explorer mode with multidimensional filtering (Correlation ID, Event Type, Target Endpoint, Status, Time Ranges from 15m to 7d) and server-side pagination.
+    - Deep-Dive Slide-Over Inspector Drawer (`DeliveryInspectorDrawerComponent`) with:
+      - Interactive vertical attempt execution timeline with status codes, latency badges, and error diagnostics.
+      - Request inspector showing `X-HookBridge-Signature` HMAC-SHA256 headers, headers JSON, and formatted payload body with byte size.
+      - Response inspector with HTTP status, latency, response headers, and response payload.
+      - Copyable cURL CLI command generator for 1-click local debugging.
+      - W3C TraceContext breakdown (`traceparent`, Trace ID, Parent Span ID).
+      - One-click Webhook Replay and Alternate Destination Endpoint redirection modal.
+    - Bulk Replay Modal (`BulkReplayModalComponent`) for batch re-enqueuing failed/dead-lettered deliveries with safety warnings.
+    - Full test suite: 183/183 unit and integration tests passing; Angular frontend clean production build with 0 errors/warnings.
 
 ### Next Session Objective
-- **FASE 14 — Live Event Inspector & Realtime Timeline**:
-  - Implement full-screen dedicated Realtime Event Timeline & Delivery Stream portal (`/events` or `/live`).
-  - Filtering by event type, status, endpoint, and payload content.
-  - Interactive timeline view with detailed request/response attempt breadcrumbs and trace correlation.
-  - Target commit: `feat: add live event inspector`.
+- **FASE 15 — Trace Explorer (Event, Delivery, Trace, Log & Audit Correlation)**:
+  - Distributed end-to-end trace correlation visualizer across Ingestion, Outbox, RabbitMQ, Consumer Worker, Outbound Dispatch, and Audit Log.
+  - Interactive waterfall DAG trace viewer correlating W3C `traceparent` and correlation IDs.
+  - Target commit: `feat: add trace explorer`.
+
 
 
 

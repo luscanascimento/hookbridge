@@ -45,6 +45,14 @@ export const routes: Routes = [
         loadComponent: () => import('./features/deliveries/deliveries.component').then(m => m.DeliveriesComponent)
       },
       {
+        path: 'live',
+        loadComponent: () => import('./features/deliveries/deliveries.component').then(m => m.DeliveriesComponent)
+      },
+      {
+        path: 'events',
+        loadComponent: () => import('./features/deliveries/deliveries.component').then(m => m.DeliveriesComponent)
+      },
+      {
         path: '**',
         redirectTo: 'dashboard'
       }

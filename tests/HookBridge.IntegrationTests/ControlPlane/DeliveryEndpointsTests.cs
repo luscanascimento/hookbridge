@@ -52,6 +52,7 @@ public class DeliveryEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         var pagedDeliveries = await listRes.Content.ReadFromJsonAsync<PagedList<DeliveryResponse>>(JsonOptions);
         pagedDeliveries.Should().NotBeNull();
         pagedDeliveries!.Items.Should().ContainSingle();
+        pagedDeliveries.Items[0].EndpointUrl.Should().Be("https://api.github.com/webhook");
 
         var deliveryId = pagedDeliveries.Items[0].Id;
 
@@ -66,6 +67,7 @@ public class DeliveryEndpointsTests : IClassFixture<CustomWebApplicationFactory>
         var detail = await detailRes.Content.ReadFromJsonAsync<DeliveryDetailResponse>(JsonOptions);
         detail.Should().NotBeNull();
         detail!.Status.Should().Be(DeliveryStatus.Success);
+        detail.EndpointUrl.Should().Be("https://api.github.com/webhook");
         detail.DeliveredAt.Should().NotBeNull();
         detail.Attempts.Should().ContainSingle();
         detail.Attempts[0].HttpStatusCode.Should().Be(200);

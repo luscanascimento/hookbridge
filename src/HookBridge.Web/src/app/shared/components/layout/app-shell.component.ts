@@ -39,6 +39,14 @@ import { LiveIndicatorComponent } from '../ui/live-indicator.component';
               <span>Dashboard</span>
             </a>
 
+            <a routerLink="/live" routerLinkActive="bg-brand-600/15 text-brand-300 border-brand-500/40 font-medium"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-surface-300 hover:bg-surface-800 hover:text-white transition-colors border border-transparent">
+              <span class="w-4 h-4 flex items-center justify-center">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              </span>
+              <span>Live Inspector</span>
+            </a>
+
             <a routerLink="/endpoints" routerLinkActive="bg-brand-600/15 text-brand-300 border-brand-500/40 font-medium"
                class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-surface-300 hover:bg-surface-800 hover:text-white transition-colors border border-transparent">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -63,26 +63,29 @@ public sealed class GetDeliveriesUseCase
         var page = Math.Max(query.Page, 1);
         var pageSize = Math.Clamp(query.PageSize, 1, 100);
 
-        var items = await baseQuery
-            .OrderByDescending(d => d.CreatedAt)
+        var items = await (from d in baseQuery
+                           join e in _dbContext.Endpoints on d.EndpointId equals e.Id into epGroup
+                           from ep in epGroup.DefaultIfEmpty()
+                           orderby d.CreatedAt descending
+                           select new DeliveryResponse(
+                               d.Id,
+                               d.TenantId,
+                               d.EventId,
+                               d.EndpointId,
+                               d.SubscriptionId,
+                               d.EventType,
+                               d.Status,
+                               d.ScheduledAt,
+                               d.DeliveredAt,
+                               d.AttemptCount,
+                               d.TraceParent,
+                               d.CorrelationId,
+                               d.OriginalDeliveryId,
+                               d.CreatedAt,
+                               d.UpdatedAt,
+                               ep != null ? ep.TargetUrl : null))
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(d => new DeliveryResponse(
-                d.Id,
-                d.TenantId,
-                d.EventId,
-                d.EndpointId,
-                d.SubscriptionId,
-                d.EventType,
-                d.Status,
-                d.ScheduledAt,
-                d.DeliveredAt,
-                d.AttemptCount,
-                d.TraceParent,
-                d.CorrelationId,
-                d.OriginalDeliveryId,
-                d.CreatedAt,
-                d.UpdatedAt))
             .ToListAsync(cancellationToken);
 
         return Result.Success(new PagedList<DeliveryResponse>(items, page, pageSize, totalCount));

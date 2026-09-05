@@ -9,6 +9,7 @@ import {
   BulkReplayDeliveriesResponse
 } from '../../shared/models/control-plane.models';
 import { DeliveryStatus } from '../signalr/models/signalr.models';
+import { environment } from '../../../environments/environment';
 
 export interface DeliveryDetail extends Delivery {
   attempts: DeliveryAttempt[];
@@ -30,7 +31,7 @@ export interface DeliveryQueryParams {
 })
 export class DeliveryService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = '/api/v1/deliveries';
+  private readonly baseUrl = `${environment.apiBaseUrl}/deliveries`;
 
   getStats(): Observable<DeliveryStats> {
     return this.http.get<DeliveryStats>(`${this.baseUrl}/stats`);

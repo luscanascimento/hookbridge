@@ -21,6 +21,7 @@ export interface RealtimeDeliveryEvent {
   deliveryId: string;
   tenantId: string;
   endpointId: string;
+  endpointUrl?: string | null;
   eventName: string;
   status: DeliveryStatus;
   attemptCount: number;

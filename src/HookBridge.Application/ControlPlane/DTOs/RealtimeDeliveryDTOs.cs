@@ -17,4 +17,5 @@ public sealed record RealtimeDeliveryEvent(
     string? TraceParent,
     DateTimeOffset Timestamp,
     AttemptResponse? Attempt = null,
-    Guid? OriginalDeliveryId = null);
+    Guid? OriginalDeliveryId = null,
+    string? EndpointUrl = null);

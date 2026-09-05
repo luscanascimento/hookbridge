@@ -52,6 +52,10 @@ public sealed class GetDeliveryByIdUseCase
                 a.ExecutedAt))
             .ToList();
 
+        var endpoint = await _dbContext.Endpoints
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == delivery.EndpointId && e.TenantId == tenantId, cancellationToken);
+
         return Result.Success(new DeliveryDetailResponse(
             delivery.Id,
             delivery.TenantId,
@@ -68,6 +72,7 @@ public sealed class GetDeliveryByIdUseCase
             delivery.OriginalDeliveryId,
             delivery.CreatedAt,
             delivery.UpdatedAt,
-            attempts));
+            attempts,
+            endpoint?.TargetUrl));
     }
 }
