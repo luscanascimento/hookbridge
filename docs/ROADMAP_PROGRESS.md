@@ -25,9 +25,9 @@
 | **FASE 11** | **Design System (Tailwind, Tokens, Dark Mode, Skeletons)** | ✅ **DONE** | `feat: add hookbridge design system` (`0882737`) |
 | **FASE 12** | **Executive Dashboard (Success Rate, Latency, DLQ, Metrics)** | ✅ **DONE** | `feat: add dashboard` (`f82fa16`) |
 | **FASE 13** | **Endpoint Management Portal & Secret Rotation UI** | ✅ **DONE** | `feat: add endpoint management` (`5a16ccb`) |
-| **FASE 14** | **Live Event Inspector & Realtime Timeline** | ✅ **DONE** | `feat: add live event inspector` |
-| **FASE 15** | **Trace Explorer (Event, Delivery, Trace, Log & Audit Correlation)** | ⏳ *Next* | `feat: add trace explorer` |
-| **FASE 16** | **Payload Inspector & Highlighting** | ⬜ Pending | `feat: add payload inspector` |
+| **FASE 14** | **Live Event Inspector & Realtime Timeline** | ✅ **DONE** | `feat: add live event inspector` (`08a24a5`) |
+| **FASE 15** | **Trace Explorer (Event, Delivery, Trace, Log & Audit Correlation)** | ✅ **DONE** | `feat: add trace explorer` |
+| **FASE 16** | **Payload Inspector & Highlighting** | ⏳ *Next* | `feat: add payload inspector` |
 | **FASE 17** | **Endpoint Health & Reliability Metrics** | ⬜ Pending | `feat: add endpoint health metrics` |
 | **FASE 18** | **Event Schemas, Versioning & Compatibility** | ⬜ Pending | `feat: add event schema management` |
 | **FASE 19** | **Developer Documentation & Code Snippets (cURL, TS, C#)** | ⬜ Pending | `docs: add developer documentation` |

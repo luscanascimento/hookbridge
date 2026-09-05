@@ -189,7 +189,7 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
       - Zero-downtime dual-key secret rotation modal (`RotateSecretResponse`) displaying key history, version, and status (`Active`, `Rotating`, `Revoked`).
       - Endpoint edit modal (URL, rate limit, timeout, description), status toggling, and deletion modal with cascade confirmation.
       - Full integration with `EndpointService` and `ToastService`.
-15. **FASE 14 — Live Event Inspector & Realtime Timeline** (`feat: add live event inspector`)
+15. **FASE 14 — Live Event Inspector & Realtime Timeline** (`feat: add live event inspector` / `08a24a5`)
     - Full-screen Live Event Inspector and Webhook Delivery Timeline (`DeliveriesComponent`) accessible via `/deliveries`, `/live`, and `/events`.
     - Real-time SignalR live streaming engine with Pause / Resume controls, unread queued events counter, clear buffer, and fast filters (Status, Endpoint, Wildcard Event Type).
     - Historical Log & Explorer mode with multidimensional filtering (Correlation ID, Event Type, Target Endpoint, Status, Time Ranges from 15m to 7d) and server-side pagination.
@@ -202,12 +202,28 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
       - One-click Webhook Replay and Alternate Destination Endpoint redirection modal.
     - Bulk Replay Modal (`BulkReplayModalComponent`) for batch re-enqueuing failed/dead-lettered deliveries with safety warnings.
     - Full test suite: 183/183 unit and integration tests passing; Angular frontend clean production build with 0 errors/warnings.
+16. **FASE 15 — Trace Explorer (Event, Delivery, Trace, Log & Audit Correlation)** (`feat: add trace explorer`)
+    - Backend Distributed Trace Correlation engine (`GetTracesUseCase`, `GetTraceDetailUseCase`, `TraceEndpoints`) at `GET /api/v1/traces` and `GET /api/v1/traces/{identifier}`.
+    - End-to-end distributed span waterfall DAG synthesizing:
+      1. Gateway Ingestion (`hookbridge.gateway.ingest`)
+      2. EventFlow Transactional Outbox (`eventflow.transactional_outbox`)
+      3. RabbitMQ Topic Exchange Transit (`rabbitmq.broker_publish`)
+      4. Consumer Worker Idempotency & Dispatch (`eventflow.consumer_worker`)
+      5. Outbound HTTP Dispatches & Attempts (`http.post {targetUrl}`)
+      6. Audit Trail Ledger (`audit.ledger_record`)
+    - Angular frontend Trace Explorer portal (`TraceExplorerComponent`) under `/traces` featuring:
+      - Search by Trace ID, Correlation ID, Delivery ID, or Event Type with time-range filtering.
+      - Master-detail view with live timing calculations, total spans counter, duration in milliseconds, and status badges.
+      - Interactive waterfall DAG chart with proportional span timing bars, expandable span attributes, and sub-events.
+      - Correlated Deliveries tab and Correlated Audit Trail tab.
+      - Raw OpenTelemetry JSON export view with one-click clipboard copy.
+    - Full test suite: 185/185 unit and integration tests passing (146 unit + 39 integration); Angular production build clean with 0 errors.
 
 ### Next Session Objective
-- **FASE 15 — Trace Explorer (Event, Delivery, Trace, Log & Audit Correlation)**:
-  - Distributed end-to-end trace correlation visualizer across Ingestion, Outbox, RabbitMQ, Consumer Worker, Outbound Dispatch, and Audit Log.
-  - Interactive waterfall DAG trace viewer correlating W3C `traceparent` and correlation IDs.
-  - Target commit: `feat: add trace explorer`.
+- **FASE 16 — Payload Inspector & Highlighting**:
+  - Advanced payload inspector with JSON path query evaluator, payload diff comparison between retry attempts, schema validator, and byte size analyzer.
+  - Target commit: `feat: add payload inspector`.
+
 
 
 

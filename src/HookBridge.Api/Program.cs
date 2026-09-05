@@ -60,6 +60,7 @@ app.MapWebhookSignatureEndpoints();
 app.MapEventPublishingEndpoints();
 app.MapDeadLetterEndpoints();
 app.MapDeliveryEndpoints();
+app.MapTraceEndpoints();
 
 // 8. Map Real-time SignalR Hubs
 app.MapHub<DeliveryHub>("/hubs/deliveries");

@@ -80,6 +80,10 @@ public static class DependencyInjection
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Deliveries.BulkReplayDeliveriesUseCase>();
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Deliveries.GetDeliveryLineageUseCase>();
 
+        // Control Plane: Distributed Trace Correlation Explorer
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Traces.GetTracesUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Traces.GetTraceDetailUseCase>();
+
         return services;
     }
 }
