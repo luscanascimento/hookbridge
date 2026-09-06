@@ -44,7 +44,35 @@ public static class EndpointEndpoints
         .RequireAuthorization(AuthorizationPolicies.RequireViewer)
         .Produces<IReadOnlyList<EndpointResponse>>(StatusCodes.Status200OK);
 
-        // 3. Get Endpoint by ID (Requires Viewer)
+        // 3. Get Tenant Endpoints Health Summary (Requires Viewer)
+        group.MapGet("/health", async (
+            [FromServices] GetTenantEndpointsHealthSummaryUseCase useCase,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await useCase.ExecuteAsync(cancellationToken);
+            return HttpResults.Match(result, StatusCodes.Status200OK);
+        })
+        .WithName("GetTenantEndpointsHealthSummary")
+        .WithSummary("Returns aggregated health scores, uptime SLA, open circuit breakers, and health state breakdown for all tenant endpoints.")
+        .RequireAuthorization(AuthorizationPolicies.RequireViewer)
+        .Produces<TenantEndpointsHealthSummaryResponse>(StatusCodes.Status200OK);
+
+        // 4. Get Endpoint Health Details (Requires Viewer)
+        group.MapGet("/{id:guid}/health", async (
+            [FromRoute] Guid id,
+            [FromServices] GetEndpointHealthMetricsUseCase useCase,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await useCase.ExecuteAsync(id, cancellationToken);
+            return HttpResults.Match(result, StatusCodes.Status200OK);
+        })
+        .WithName("GetEndpointHealthMetrics")
+        .WithSummary("Retrieves deep reliability metrics, latency quantiles (p50/p90/p95/p99), circuit breaker state, hourly trends, and incident alerts for an endpoint.")
+        .RequireAuthorization(AuthorizationPolicies.RequireViewer)
+        .Produces<EndpointHealthResponse>(StatusCodes.Status200OK)
+        .Produces<ProblemDetails>(StatusCodes.Status404NotFound);
+
+        // 5. Get Endpoint by ID (Requires Viewer)
         group.MapGet("/{id:guid}", async (
             [FromRoute] Guid id,
             [FromServices] GetEndpointByIdUseCase useCase,

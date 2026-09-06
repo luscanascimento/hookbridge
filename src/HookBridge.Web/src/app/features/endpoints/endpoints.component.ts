@@ -9,14 +9,21 @@ import {
   SkeletonLoaderComponent,
   ModalComponent,
   SearchFilterBarComponent,
-  EmptyStateComponent
+  EmptyStateComponent,
+  HealthScoreGaugeComponent,
+  CircuitBreakerBadgeComponent
 } from '../../shared/components';
+import { EndpointHealthDrawerComponent } from './endpoint-health-drawer.component';
 import {
   Endpoint,
   EndpointStatus,
   WebhookSecret,
   Application
 } from '../../shared/models/control-plane.models';
+import {
+  TenantEndpointsHealthSummary,
+  EndpointHealthSummary
+} from '../../core/models/endpoint-health.models';
 
 @Component({
   selector: 'app-endpoints',
@@ -30,7 +37,10 @@ import {
     SkeletonLoaderComponent,
     ModalComponent,
     SearchFilterBarComponent,
-    EmptyStateComponent
+    EmptyStateComponent,
+    HealthScoreGaugeComponent,
+    CircuitBreakerBadgeComponent,
+    EndpointHealthDrawerComponent
   ],
   template: `
     <div class="space-y-6 pb-12">
@@ -66,6 +76,67 @@ import {
           </app-button>
         </div>
       </div>
+
+      <!-- Health & Reliability Overview Cards -->
+      @if (tenantHealthSummary(); as summary) {
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <!-- Card 1: Overall Health Score -->
+          <div class="p-4 rounded-xl bg-surface-900/80 border border-surface-800 flex items-center justify-between">
+            <div>
+              <div class="text-[11px] font-medium text-surface-400 uppercase tracking-wider">Overall Health Score</div>
+              <div class="text-xl font-bold text-white font-mono mt-1">
+                {{ summary.overallHealthScorePercent }}%
+              </div>
+              <div class="text-[10px] text-surface-500 mt-0.5">
+                Across {{ summary.totalEndpoints }} active destinations
+              </div>
+            </div>
+            <app-health-score-gauge [score]="summary.overallHealthScorePercent" size="md"></app-health-score-gauge>
+          </div>
+
+          <!-- Card 2: Uptime SLA -->
+          <div class="p-4 rounded-xl bg-surface-900/80 border border-surface-800">
+            <div class="text-[11px] font-medium text-surface-400 uppercase tracking-wider">Uptime SLA (24h)</div>
+            <div class="text-xl font-bold text-emerald-400 font-mono mt-1">
+              {{ summary.overallUptimePercent }}%
+            </div>
+            <div class="text-[10px] text-emerald-400/80 mt-0.5">
+              Target SLA: 99.9%
+            </div>
+          </div>
+
+          <!-- Card 3: Endpoint Status Breakdown -->
+          <div class="p-4 rounded-xl bg-surface-900/80 border border-surface-800">
+            <div class="text-[11px] font-medium text-surface-400 uppercase tracking-wider">Health Statuses</div>
+            <div class="flex items-center gap-2 mt-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                {{ summary.healthyCount }} healthy
+              </span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                {{ summary.degradedCount }} degraded
+              </span>
+              @if (summary.criticalCount > 0) {
+                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                  {{ summary.criticalCount }} critical
+                </span>
+              }
+            </div>
+          </div>
+
+          <!-- Card 4: Circuit Breakers & Incidents -->
+          <div class="p-4 rounded-xl bg-surface-900/80 border border-surface-800">
+            <div class="text-[11px] font-medium text-surface-400 uppercase tracking-wider">Circuit State & Incidents</div>
+            <div class="flex items-center gap-2 mt-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold" [ngClass]="summary.totalOpenCircuits > 0 ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30' : 'bg-surface-800 text-surface-300 border border-surface-700'">
+                {{ summary.totalOpenCircuits }} open
+              </span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold" [ngClass]="summary.activeIncidentCount > 0 ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-surface-800 text-surface-300 border border-surface-700'">
+                {{ summary.activeIncidentCount }} incident{{ summary.activeIncidentCount === 1 ? '' : 's' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      }
 
       <!-- Search & Status Filter Bar -->
       <app-search-filter-bar
@@ -115,6 +186,18 @@ import {
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2.5 flex-wrap">
                       <app-status-badge [status]="ep.status"></app-status-badge>
+                      
+                      <!-- Live Health Score Badge -->
+                      @if (getEndpointHealthSummary(ep.id); as epHealth) {
+                        <button
+                          type="button"
+                          (click)="openHealthDrawer(ep)"
+                          title="Click to view full reliability diagnostics">
+                          <app-health-score-gauge [score]="epHealth.healthScorePercent" size="sm"></app-health-score-gauge>
+                        </button>
+                        <app-circuit-breaker-badge [state]="epHealth.circuitState"></app-circuit-breaker-badge>
+                      }
+
                       <span class="text-sm font-semibold font-mono text-white select-all break-all">
                         {{ ep.targetUrl }}
                       </span>
@@ -127,6 +210,17 @@ import {
 
                   <!-- Action Buttons Toolbar -->
                   <div class="flex items-center gap-2 shrink-0">
+                    <!-- Health & SLA Diagnostics Button -->
+                    <app-button
+                      variant="secondary"
+                      size="sm"
+                      (clicked)="openHealthDrawer(ep)">
+                      <svg slot="icon-left" class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      Health & SLA
+                    </app-button>
+
                     <!-- Manage Secrets Button -->
                     <app-button
                       variant="secondary"
@@ -135,7 +229,7 @@ import {
                       <svg slot="icon-left" class="w-3.5 h-3.5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                       </svg>
-                      Secrets & Keys
+                      Secrets
                     </app-button>
 
                     <!-- Edit Button -->
@@ -511,6 +605,14 @@ import {
           </div>
         </div>
       </app-modal>
+
+      <!-- DRAWER: Endpoint Health & SLA Diagnostics -->
+      <app-endpoint-health-drawer
+        [isOpen]="isHealthDrawerOpen()"
+        [endpointId]="healthDrawerEndpointId()"
+        [targetUrl]="healthDrawerTargetUrl()"
+        (closed)="closeHealthDrawer()">
+      </app-endpoint-health-drawer>
     </div>
   `
 })
@@ -520,9 +622,15 @@ export class EndpointsComponent implements OnInit {
 
   readonly endpoints = signal<Endpoint[]>([]);
   readonly applications = signal<Application[]>([]);
+  readonly tenantHealthSummary = signal<TenantEndpointsHealthSummary | null>(null);
   readonly isLoading = signal<boolean>(true);
   readonly isSubmitting = signal<boolean>(false);
   readonly isRotating = signal<boolean>(false);
+
+  // Health Drawer state
+  readonly isHealthDrawerOpen = signal<boolean>(false);
+  readonly healthDrawerEndpointId = signal<string | null>(null);
+  readonly healthDrawerTargetUrl = signal<string | null>(null);
 
   readonly searchQuery = signal<string>('');
   readonly activeFilters = signal<Record<string, string>>({});
@@ -605,6 +713,32 @@ export class EndpointsComponent implements OnInit {
         this.toast.error('Failed to load webhook endpoints');
       }
     });
+    this.loadHealthSummary();
+  }
+
+  loadHealthSummary(): void {
+    this.endpointService.getEndpointsHealthSummary().subscribe({
+      next: (summary) => {
+        this.tenantHealthSummary.set(summary);
+      },
+      error: () => {}
+    });
+  }
+
+  getEndpointHealthSummary(endpointId: string): EndpointHealthSummary | undefined {
+    return this.tenantHealthSummary()?.endpoints.find(e => e.endpointId === endpointId);
+  }
+
+  openHealthDrawer(ep: Endpoint): void {
+    this.healthDrawerEndpointId.set(ep.id);
+    this.healthDrawerTargetUrl.set(ep.targetUrl);
+    this.isHealthDrawerOpen.set(true);
+  }
+
+  closeHealthDrawer(): void {
+    this.isHealthDrawerOpen.set(false);
+    this.healthDrawerEndpointId.set(null);
+    this.healthDrawerTargetUrl.set(null);
   }
 
   loadApplications(): void {

@@ -81,4 +81,13 @@ export class EndpointService {
   createApplication(command: { name: string; description?: string }): Observable<Application> {
     return this.http.post<Application>(this.appsUrl, command);
   }
+
+  // Endpoint Health & Reliability Metrics
+  getEndpointsHealthSummary(): Observable<import('../models/endpoint-health.models').TenantEndpointsHealthSummary> {
+    return this.http.get<import('../models/endpoint-health.models').TenantEndpointsHealthSummary>(`${this.baseUrl}/health`);
+  }
+
+  getEndpointHealth(id: string): Observable<import('../models/endpoint-health.models').EndpointHealth> {
+    return this.http.get<import('../models/endpoint-health.models').EndpointHealth>(`${this.baseUrl}/${id}/health`);
+  }
 }

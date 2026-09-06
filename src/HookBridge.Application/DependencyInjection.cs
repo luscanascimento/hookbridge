@@ -40,6 +40,8 @@ public static class DependencyInjection
         services.AddScoped<UpdateEndpointUseCase>();
         services.AddScoped<UpdateEndpointStatusUseCase>();
         services.AddScoped<DeleteEndpointUseCase>();
+        services.AddScoped<GetEndpointHealthMetricsUseCase>();
+        services.AddScoped<GetTenantEndpointsHealthSummaryUseCase>();
 
         // Control Plane: Subscriptions
         services.AddScoped<CreateSubscriptionUseCase>();

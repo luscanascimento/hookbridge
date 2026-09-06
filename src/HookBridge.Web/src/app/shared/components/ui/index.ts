@@ -19,3 +19,7 @@ export * from './json-tree-viewer.component';
 export * from './payload-diff-viewer.component';
 export * from './json-path-evaluator.component';
 export * from './payload-analyzer.component';
+export * from './health-score-gauge.component';
+export * from './circuit-breaker-badge.component';
+export * from './latency-quantiles-card.component';
+export * from './incident-alerts-banner.component';

@@ -233,10 +233,28 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
       - Enhanced `DeliveryInspectorDrawerComponent` with Tree/Code view toggle, attempt-to-attempt diff comparison tab, and deep-link navigation to the Payload Inspector.
     - Full test suite: 196/196 unit and integration tests passing (155 unit + 41 integration); Angular production build clean with 0 errors and 0 warnings.
 
+18. **FASE 17 — Endpoint Health & Reliability Metrics** (`feat: add endpoint health metrics`)
+    - Backend Health & Reliability Computation Engine (`GetEndpointHealthMetricsUseCase`, `GetTenantEndpointsHealthSummaryUseCase`) under `HookBridge.Application/ControlPlane/UseCases/Endpoints/` and `HookBridge.Api/Endpoints/EndpointEndpoints.cs`:
+      - `GET /api/v1/endpoints/health`: Returns aggregated tenant-level reliability summary including overall health score (0–100%), overall 24h SLA uptime %, healthy/degraded/critical endpoint counts, total open circuit breakers count, active incident count, and per-endpoint health cards.
+      - `GET /api/v1/endpoints/{id}/health`: Computes comprehensive endpoint health diagnostics with:
+        - Health score calculation: $\text{clamp}\big((successRate \times 0.7) + (latencyScore \times 0.3) - \min(40, consecutiveFailures \times 10), 0, 100\big)$ with rating (`Healthy` $\ge 80$, `Degraded` $\ge 50$, `Critical` $< 50$).
+        - 24h SLA Uptime percentage and success rate percentage.
+        - Latency quantiles calculation: p50, p90, p95, p99, and average response time in milliseconds over the last 24h attempts.
+        - Circuit breaker state determination: `Closed` (normal), `HalfOpen` ($3 \le consecutiveFailures < 5$), `Open` ($consecutiveFailures \ge 5$ or Endpoint status is `Disabled`).
+        - Automated incident detection: generates actionable alerts with severity levels (`Info`, `Warning`, `Critical`) for elevated error rates, open circuit breakers, high p99 latency (> 2500ms), consecutive failure spikes, and endpoint disabled states.
+    - Angular frontend Endpoint Health & Reliability Suite:
+      - `HealthScoreGaugeComponent`: Circular SVG gauge with dynamic color themes (emerald, amber, rose) and animated score display.
+      - `CircuitBreakerBadgeComponent`: Color-coded state badge with pulsing indicator dot and state description.
+      - `LatencyQuantilesCardComponent`: Responsive quantiles grid (p50, p90, p95, p99, Avg) with micro-bar visualization and SLA threshold indicators.
+      - `IncidentAlertsBannerComponent`: Actionable incident cards with severity indicators and remediation recommendations.
+      - `EndpointHealthDrawerComponent`: Deep-dive slide-over drawer showing real-time reliability breakdown, latency quantiles, circuit breaker state, active incident banners, and quick links to correlated deliveries and traces.
+      - Top KPI summary cards on `EndpointsComponent` (`/endpoints`) displaying overall health score, 24h SLA uptime, health status breakdown, and active circuit state counts.
+    - Full test suite: 201/201 unit and integration tests passing (158 unit + 43 integration); Angular production build clean with 0 errors and 0 warnings.
+
 ### Next Session Objective
-- **FASE 17 — Endpoint Health & Reliability Metrics**:
-  - Endpoint reliability scoring (uptime SLA %, error rate trends, p50/p90/p99 latency quantiles, circuit breaker health states, and automated incident status alerts).
-  - Target commit: `feat: add endpoint health metrics`.
+- **FASE 18 — Event Schemas, Versioning & Compatibility**:
+  - Event schema registry (JSON Schema Draft 2020-12), schema versioning (v1, v2, ...), backwards/forwards/full compatibility checks, validation rules, payload contract drift detection, and schema documentation generator.
+  - Target commit: `feat: add event schema management`.
 
 
 

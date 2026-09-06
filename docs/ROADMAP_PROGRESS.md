@@ -27,9 +27,9 @@
 | **FASE 13** | **Endpoint Management Portal & Secret Rotation UI** | ✅ **DONE** | `feat: add endpoint management` (`5a16ccb`) |
 | **FASE 14** | **Live Event Inspector & Realtime Timeline** | ✅ **DONE** | `feat: add live event inspector` (`08a24a5`) |
 | **FASE 15** | **Trace Explorer (Event, Delivery, Trace, Log & Audit Correlation)** | ✅ **DONE** | `feat: add trace explorer` (`d788a88`) |
-| **FASE 16** | **Payload Inspector & Highlighting** | ✅ **DONE** | `feat: add payload inspector` |
-| **FASE 17** | **Endpoint Health & Reliability Metrics** | ⏳ *Next* | `feat: add endpoint health metrics` |
-| **FASE 18** | **Event Schemas, Versioning & Compatibility** | ⬜ Pending | `feat: add event schema management` |
+| **FASE 16** | **Payload Inspector & Highlighting** | ✅ **DONE** | `feat: add payload inspector` (`df8778e`) |
+| **FASE 17** | **Endpoint Health & Reliability Metrics** | ✅ **DONE** | `feat: add endpoint health metrics` |
+| **FASE 18** | **Event Schemas, Versioning & Compatibility** | ⏳ *Next* | `feat: add event schema management` |
 | **FASE 19** | **Developer Documentation & Code Snippets (cURL, TS, C#)** | ⬜ Pending | `docs: add developer documentation` |
 | **FASE 20** | **Webhook Sandbox Receiver & Realtime Inspection** | ⬜ Pending | `feat: add webhook sandbox` |
 | **FASE 21** | **Delivery Failure Simulator (200, 429, 500, Timeout, Chaos)** | ⬜ Pending | `feat: add delivery failure simulator` |
