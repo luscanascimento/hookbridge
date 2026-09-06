@@ -218,11 +218,25 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
       - Correlated Deliveries tab and Correlated Audit Trail tab.
       - Raw OpenTelemetry JSON export view with one-click clipboard copy.
     - Full test suite: 185/185 unit and integration tests passing (146 unit + 39 integration); Angular production build clean with 0 errors.
+17. **FASE 16 — Payload Inspector & Highlighting** (`feat: add payload inspector`)
+    - Backend JSON analysis, JSONPath evaluation, deep structural diffing, and schema validation engine under `HookBridge.Application/ControlPlane/UseCases/Payloads/` and `HookBridge.Api/Endpoints/PayloadEndpoints.cs`:
+      - `POST /api/v1/payloads/analyze`: Returns raw/minified/formatted byte sizes, estimated Gzip compression ratio %, non-ASCII / Unicode multi-byte character detection, structure depth, key counts, data types breakdown, and inferred JSON Schema (Draft 2020-12).
+      - `POST /api/v1/payloads/jsonpath`: Evaluates JSONPath queries (`$`, `$.prop`, `$.items[*]`, `$..prop`, `*`) returning matched paths, typed values, and match counts.
+      - `POST /api/v1/payloads/diff`: Computes deep structural differences between two payloads, tracking Added, Removed, Modified, and Unchanged properties with byte size deltas.
+      - `POST /api/v1/payloads/validate`: Validates JSON payloads against schema rules, type constraints, string formats (`uuid`, `date-time`, `uri`, `email`), required properties, and additional property guards.
+    - Angular frontend Payload Explorer & Inspector Suite:
+      - Interactive Collapsible JSON Tree Viewer (`JsonTreeViewerComponent`) with per-node copy path/value/subtree, item counters, expand/collapse all, and query search highlighting.
+      - JSONPath Query Lab (`JsonPathEvaluatorComponent`) with live query execution, preset library (`$.id`, `$.event`, `$..email`, etc.), and jump-to-path navigation.
+      - Structural Payload Diff Viewer (`PayloadDiffViewerComponent`) with color-coded diff table (+ Added, - Removed, ~ Modified), byte delta summary, and changes-only filter.
+      - Payload Size & Structure Analyzer (`PayloadAnalyzerComponent`) with KPI cards, data type distribution matrix, inferred schema viewer, and interactive schema validator sandbox.
+      - Dedicated `/payloads` standalone playground portal (`PayloadInspectorComponent`) with sample presets (Stripe, Shopify, GitHub, Linear, HookBridge) and delivery ID loader.
+      - Enhanced `DeliveryInspectorDrawerComponent` with Tree/Code view toggle, attempt-to-attempt diff comparison tab, and deep-link navigation to the Payload Inspector.
+    - Full test suite: 196/196 unit and integration tests passing (155 unit + 41 integration); Angular production build clean with 0 errors and 0 warnings.
 
 ### Next Session Objective
-- **FASE 16 — Payload Inspector & Highlighting**:
-  - Advanced payload inspector with JSON path query evaluator, payload diff comparison between retry attempts, schema validator, and byte size analyzer.
-  - Target commit: `feat: add payload inspector`.
+- **FASE 17 — Endpoint Health & Reliability Metrics**:
+  - Endpoint reliability scoring (uptime SLA %, error rate trends, p50/p90/p99 latency quantiles, circuit breaker health states, and automated incident status alerts).
+  - Target commit: `feat: add endpoint health metrics`.
 
 
 

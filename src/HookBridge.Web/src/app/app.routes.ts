@@ -57,6 +57,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/traces/trace-explorer.component').then(m => m.TraceExplorerComponent)
       },
       {
+        path: 'payloads',
+        loadComponent: () => import('./features/payloads/payload-inspector.component').then(m => m.PayloadInspectorComponent)
+      },
+      {
         path: '**',
         redirectTo: 'dashboard'
       }

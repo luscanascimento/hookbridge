@@ -15,3 +15,7 @@ export * from './toast/toast.models';
 export * from './toast/toast.service';
 export * from './toast/toast.component';
 export * from './toast/toast-container.component';
+export * from './json-tree-viewer.component';
+export * from './payload-diff-viewer.component';
+export * from './json-path-evaluator.component';
+export * from './payload-analyzer.component';

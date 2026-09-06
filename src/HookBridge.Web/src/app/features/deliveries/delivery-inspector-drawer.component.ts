@@ -14,6 +14,10 @@ import { ToastService } from '../../shared/components/ui/toast/toast.service';
 import { Endpoint, DeliveryAttempt } from '../../shared/models/control-plane.models';
 import { RealtimeDeliveryEvent } from '../../core/signalr/models/signalr.models';
 
+import { RouterLink } from '@angular/router';
+import { JsonTreeViewerComponent } from '../../shared/components/ui/json-tree-viewer.component';
+import { PayloadDiffViewerComponent } from '../../shared/components/ui/payload-diff-viewer.component';
+
 @Component({
   selector: 'app-delivery-inspector-drawer',
   standalone: true,
@@ -22,9 +26,12 @@ import { RealtimeDeliveryEvent } from '../../core/signalr/models/signalr.models'
     CommonModule,
     DatePipe,
     FormsModule,
+    RouterLink,
     SlideOverComponent,
     StatusBadgeComponent,
     CodeViewerComponent,
+    JsonTreeViewerComponent,
+    PayloadDiffViewerComponent,
     TabGroupComponent,
     TabComponent,
     SkeletonLoaderComponent,
@@ -269,19 +276,75 @@ import { RealtimeDeliveryEvent } from '../../core/signalr/models/signalr.models'
                 </div>
 
                 <!-- Request Body -->
-                <div class="space-y-1.5">
+                <div class="space-y-2">
                   <div class="flex items-center justify-between">
-                    <div class="text-[11px] font-semibold text-surface-400 uppercase tracking-wider">Payload Body</div>
-                    <span class="text-[10px] font-mono text-surface-500">{{ payloadByteSize() }} bytes</span>
+                    <div class="flex items-center gap-2">
+                      <span class="text-[11px] font-semibold text-surface-400 uppercase tracking-wider">Payload Body</span>
+                      <span class="text-[10px] font-mono text-surface-500">{{ payloadByteSize() }} bytes</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                      <!-- Tree vs Code Toggle -->
+                      <div class="flex items-center bg-surface-900 rounded-lg p-0.5 border border-surface-800 text-[11px] font-sans">
+                        <button
+                          type="button"
+                          (click)="payloadViewMode.set('tree')"
+                          class="px-2 py-0.5 rounded transition-colors"
+                          [ngClass]="payloadViewMode() === 'tree' ? 'bg-surface-800 text-white font-medium' : 'text-surface-400 hover:text-white'">
+                          Tree View
+                        </button>
+                        <button
+                          type="button"
+                          (click)="payloadViewMode.set('code')"
+                          class="px-2 py-0.5 rounded transition-colors"
+                          [ngClass]="payloadViewMode() === 'code' ? 'bg-surface-800 text-white font-medium' : 'text-surface-400 hover:text-white'">
+                          Code
+                        </button>
+                      </div>
+
+                      <!-- Open in Payload Inspector link -->
+                      <a
+                        [routerLink]="['/payloads']"
+                        [queryParams]="{ deliveryId: currentDeliveryId() }"
+                        (click)="onClose()"
+                        class="px-2 py-0.5 rounded bg-brand-600/20 hover:bg-brand-600/30 text-brand-300 border border-brand-500/30 text-[11px] font-sans transition-colors inline-flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                        <span>Query Lab</span>
+                      </a>
+                    </div>
                   </div>
-                  <app-code-viewer
-                    [code]="currentAttempt()?.requestBody || '{}'"
-                    language="json"
-                    title="JSON Payload">
-                  </app-code-viewer>
+
+                  @if (payloadViewMode() === 'tree') {
+                    <app-json-tree-viewer
+                      [json]="currentAttempt()?.requestBody || '{}'">
+                    </app-json-tree-viewer>
+                  } @else {
+                    <app-code-viewer
+                      [code]="currentAttempt()?.requestBody || '{}'"
+                      language="json"
+                      title="JSON Payload">
+                    </app-code-viewer>
+                  }
                 </div>
               </div>
             </app-tab>
+
+            <!-- Tab: Attempt Diff & Compare (visible if multiple attempts) -->
+            @if (attempts().length > 1) {
+              <app-tab id="diff" label="Compare Attempts" [badge]="attempts().length">
+                <div class="space-y-4 pt-2">
+                  <div class="text-xs text-surface-400">
+                    Comparing Attempt #1 against Attempt #{{ currentAttempt()?.attemptNumber || attempts().length }}:
+                  </div>
+                  <app-payload-diff-viewer
+                    [leftJson]="attempts()[0].requestBody || '{}'"
+                    [rightJson]="currentAttempt()?.requestBody || '{}'">
+                  </app-payload-diff-viewer>
+                </div>
+              </app-tab>
+            }
 
             <!-- Tab 3: Response Data -->
             <app-tab id="response" label="Response">
@@ -479,6 +542,7 @@ export class DeliveryInspectorDrawerComponent {
   readonly showOverrideModal = signal<boolean>(false);
   readonly overrideEndpointId = signal<string | null>(null);
   readonly copiedField = signal<string | null>(null);
+  readonly payloadViewMode = signal<'tree' | 'code'>('tree');
 
   constructor() {
     effect(() => {

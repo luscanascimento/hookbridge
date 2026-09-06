@@ -84,6 +84,12 @@ public static class DependencyInjection
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Traces.GetTracesUseCase>();
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Traces.GetTraceDetailUseCase>();
 
+        // Control Plane: Payload Inspector & Analysis
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Payloads.AnalyzePayloadUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Payloads.EvaluateJsonPathUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Payloads.DiffPayloadsUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Payloads.ValidatePayloadSchemaUseCase>();
+
         return services;
     }
 }

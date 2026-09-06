@@ -61,6 +61,7 @@ app.MapEventPublishingEndpoints();
 app.MapDeadLetterEndpoints();
 app.MapDeliveryEndpoints();
 app.MapTraceEndpoints();
+app.MapPayloadEndpoints();
 
 // 8. Map Real-time SignalR Hubs
 app.MapHub<DeliveryHub>("/hubs/deliveries");
