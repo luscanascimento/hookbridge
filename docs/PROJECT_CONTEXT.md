@@ -251,12 +251,21 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
       - Top KPI summary cards on `EndpointsComponent` (`/endpoints`) displaying overall health score, 24h SLA uptime, health status breakdown, and active circuit state counts.
     - Full test suite: 201/201 unit and integration tests passing (158 unit + 43 integration); Angular production build clean with 0 errors and 0 warnings.
 
+19. **FASE 18 — Event Schemas, Versioning & Compatibility** (`feat: add event schema management`)
+    - Backend Event Schema & Versioning Registry (`EventSchema`, `EventSchemaVersion`, `IHookBridgeDbContext`) under `HookBridge.Application/ControlPlane/UseCases/Schemas/` and `HookBridge.Api/Endpoints/EventSchemaEndpoints.cs`:
+      - Schema Compatibility Engine (`ISchemaCompatibilityChecker` / `SchemaCompatibilityChecker`): Evaluates JSON Schema (Draft 2020-12) diffs enforcing `Backward`, `Forward`, `Full`, or `None` compatibility modes, detecting breaking changes (type shifts, missing required properties, removed enum values, unexpected additions).
+      - Schema Documentation & Code Generator (`ISchemaCodeGenerator` / `SchemaCodeGenerator`): Generates TypeScript interfaces, C# record classes, Markdown specifications, and synthetic valid sample payload JSON from schemas.
+      - Contract Drift Detection (`DetectSchemaDriftUseCase`): Audits recent deliveries against registered active schema, reporting total analyzed, conforming vs non-conforming counts, conformance rate %, and detected drift anomalies.
+      - Complete REST API at `/api/v1/schemas`: List, Create, Get Details, Update, Delete, Create Version, Activate Version, Deprecate Version, Check Compatibility, Validate Payload, Detect Drift, and Generate Docs.
+    - Angular frontend Event Schema Registry & Governance Portal:
+      - Top KPI summary cards on `/schemas` (Total Schemas, Active Schemas, Total Versions, Strict Policies).
+      - Fast search and filter chips by Compatibility Mode (`Backward`, `Forward`, `Full`, `None`) and Status (`Active`, `Draft`, `Deprecated`, `Archived`).
+      - Schema Registration Modal (`SchemaCreateModalComponent`) with presets (`order.created`, `invoice.paid`, `user.registered`, `payment.disputed`, `custom`), JSON schema editor with live syntax check, and auto-formatting.
+      - Schema Version Release Modal (`SchemaVersionModalComponent`) with real-time compatibility evaluator, breaking change warning banner, and force override controls.
+      - Master Slide-Over Drawer with 4 interactive tabs: Version History & Evolution, Interactive Docs & SDK Typings, Contract Drift Detector with live audit, and Payload Validation Sandbox.
+    - Full test suite: 219/219 unit and integration tests passing (174 unit + 45 integration); Angular production build clean with 0 errors and 0 warnings.
+
 ### Next Session Objective
-- **FASE 18 — Event Schemas, Versioning & Compatibility**:
-  - Event schema registry (JSON Schema Draft 2020-12), schema versioning (v1, v2, ...), backwards/forwards/full compatibility checks, validation rules, payload contract drift detection, and schema documentation generator.
-  - Target commit: `feat: add event schema management`.
-
-
-
-
-
+- **FASE 19 — Developer Documentation & Code Snippets (cURL, TS, C#)**:
+  - Developer portal documentation view, copyable code snippets, webhook integration guides, signature verification SDK examples, and OpenAPI reference integration.
+  - Target commit: `docs: add developer documentation`.

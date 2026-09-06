@@ -35,6 +35,8 @@ public sealed class HookBridgeDbContext : DbContext, IHookBridgeDbContext
     public DbSet<Attempt> Attempts => Set<Attempt>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<EventSchema> EventSchemas => Set<EventSchema>();
+    public DbSet<EventSchemaVersion> EventSchemaVersions => Set<EventSchemaVersion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

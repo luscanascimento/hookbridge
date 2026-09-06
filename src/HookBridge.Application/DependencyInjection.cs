@@ -92,6 +92,22 @@ public static class DependencyInjection
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Payloads.DiffPayloadsUseCase>();
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Payloads.ValidatePayloadSchemaUseCase>();
 
+        // Control Plane: Event Schemas & Versioning Registry
+        services.AddSingleton<HookBridge.Application.ControlPlane.Services.ISchemaCompatibilityChecker, HookBridge.Application.ControlPlane.Services.SchemaCompatibilityChecker>();
+        services.AddSingleton<HookBridge.Application.ControlPlane.Services.ISchemaCodeGenerator, HookBridge.Application.ControlPlane.Services.SchemaCodeGenerator>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.CreateEventSchemaUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.GetEventSchemasUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.GetEventSchemaByIdUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.UpdateEventSchemaUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.DeleteEventSchemaUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.CreateSchemaVersionUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.ActivateSchemaVersionUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.DeprecateSchemaVersionUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.CheckSchemaCompatibilityUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.ValidateEventPayloadUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.DetectSchemaDriftUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.GenerateSchemaDocsUseCase>();
+
         return services;
     }
 }

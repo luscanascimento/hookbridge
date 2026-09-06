@@ -20,6 +20,8 @@ public interface IHookBridgeDbContext
     DbSet<Attempt> Attempts { get; }
     DbSet<AuditEntry> AuditEntries { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
+    DbSet<EventSchema> EventSchemas { get; }
+    DbSet<EventSchemaVersion> EventSchemaVersions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
