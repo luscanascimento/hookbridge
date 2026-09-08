@@ -108,6 +108,11 @@ public static class DependencyInjection
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.DetectSchemaDriftUseCase>();
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Schemas.GenerateSchemaDocsUseCase>();
 
+        // Control Plane: Developer Documentation & Code Snippets
+        services.AddSingleton<HookBridge.Application.ControlPlane.Services.IDocSnippetGenerator, HookBridge.Application.ControlPlane.Services.DocSnippetGenerator>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Documentation.GetApiReferenceUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Documentation.GenerateDocSnippetUseCase>();
+
         return services;
     }
 }

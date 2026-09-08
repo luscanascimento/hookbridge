@@ -30,8 +30,8 @@
 | **FASE 16** | **Payload Inspector & Highlighting** | ✅ **DONE** | `feat: add payload inspector` (`df8778e`) |
 | **FASE 17** | **Endpoint Health & Reliability Metrics** | ✅ **DONE** | `feat: add endpoint health metrics` (`f45751d`) |
 | **FASE 18** | **Event Schemas, Versioning & Compatibility** | ✅ **DONE** | `feat: add event schema management` |
-| **FASE 19** | **Developer Documentation & Code Snippets (cURL, TS, C#)** | ⏳ *Next* | `docs: add developer documentation` |
-| **FASE 20** | **Webhook Sandbox Receiver & Realtime Inspection** | ⬜ Pending | `feat: add webhook sandbox` |
+| **FASE 19** | **Developer Documentation & Code Snippets (cURL, TS, C#)** | ✅ **DONE** | `docs: add developer documentation` |
+| **FASE 20** | **Webhook Sandbox Receiver & Realtime Inspection** | ⏳ *Next* | `feat: add webhook sandbox` |
 | **FASE 21** | **Delivery Failure Simulator (200, 429, 500, Timeout, Chaos)** | ⬜ Pending | `feat: add delivery failure simulator` |
 | **FASE 22** | **OpenTelemetry Observability (Traces, Metrics, Logs, Jaeger)** | ⬜ Pending | `feat: add observability` |
 | **FASE 23** | **Adversarial Security Hardening (IDOR, SSRF, XSS, Replay)** | ⬜ Pending | `fix: harden application security` |

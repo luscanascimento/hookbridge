@@ -265,7 +265,21 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
       - Master Slide-Over Drawer with 4 interactive tabs: Version History & Evolution, Interactive Docs & SDK Typings, Contract Drift Detector with live audit, and Payload Validation Sandbox.
     - Full test suite: 219/219 unit and integration tests passing (174 unit + 45 integration); Angular production build clean with 0 errors and 0 warnings.
 
+20. **FASE 19 — Developer Documentation & Code Snippets (cURL, TS, C#)** (`docs: add developer documentation`)
+    - Backend Multi-Language Code Generation & Documentation Engine (`IDocSnippetGenerator` / `DocSnippetGenerator`, `GetApiReferenceUseCase`, `GenerateDocSnippetUseCase`, `DocEndpoints`) under `HookBridge.Application/ControlPlane/Services/`, `HookBridge.Application/ControlPlane/UseCases/Documentation/`, and `HookBridge.Api/Endpoints/DocEndpoints.cs`:
+      - `GET /api/v1/docs/reference`: Returns complete structured API reference, architectural guides (Quickstart, Webhook Signing HMAC-SHA256, Anti-Replay Tolerance, Zero-Downtime Secret Rotation, Retries & Idempotency, RFC 7807 Error Handling), endpoint parameter definitions, and SDK integration recipes.
+      - `POST /api/v1/docs/snippets`: Dynamically generates executable code snippets (cURL, TypeScript/Node.js, C# .NET 10, Python, Go, PHP) for any endpoint and payload.
+      - `GET /api/v1/docs/sdk-recipes/{language}`: Returns dedicated SDK recipe with drop-in cryptographic verification functions and event publishing clients.
+    - Angular frontend Developer Documentation & API Portal (`DocsComponent`) under `/docs`:
+      - Interactive Sticky Navigation with category tree (Getting Started, Security & Signing, Reliability & Retries, Sandbox, SDK Recipes, REST API Endpoints with HTTP method badges).
+      - Global multi-language switcher tabs (cURL, TypeScript / Node.js, C# / .NET 10, Python, Go, PHP) dynamically updating code blocks across all sections.
+      - Interactive HMAC-SHA256 Signature Verification Sandbox with live payload presets, Unix timestamp calculation, clock skew validator, canonical string inspector, and online verification.
+      - Multi-language SDK integration recipe hub with 1-click install command copy and verification function export.
+      - Grouped REST API reference with parameter tables, header definitions, request/response JSON viewers, and deep links to relevant HookBridge portal tools (Payload Inspector, Live Inspector, Schema Registry).
+    - Full test suite: 241/241 unit and integration tests passing (192 unit + 49 integration); Angular production build clean with 0 errors and 0 warnings.
+
 ### Next Session Objective
-- **FASE 19 — Developer Documentation & Code Snippets (cURL, TS, C#)**:
-  - Developer portal documentation view, copyable code snippets, webhook integration guides, signature verification SDK examples, and OpenAPI reference integration.
-  - Target commit: `docs: add developer documentation`.
+- **FASE 20 — Webhook Sandbox Receiver & Realtime Inspection**:
+  - Webhook sandbox receiver endpoints (ephemeral URLs for testing incoming webhooks), real-time inspection, payload capture, response simulation, and live websocket streaming.
+  - Target commit: `feat: add webhook sandbox`.
+
