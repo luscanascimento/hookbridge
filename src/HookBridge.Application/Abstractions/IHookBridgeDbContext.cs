@@ -22,6 +22,8 @@ public interface IHookBridgeDbContext
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<EventSchema> EventSchemas { get; }
     DbSet<EventSchemaVersion> EventSchemaVersions { get; }
+    DbSet<WebhookSandbox> WebhookSandboxes { get; }
+    DbSet<SandboxRequest> SandboxRequests { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

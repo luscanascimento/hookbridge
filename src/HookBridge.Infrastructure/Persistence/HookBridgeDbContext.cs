@@ -37,6 +37,8 @@ public sealed class HookBridgeDbContext : DbContext, IHookBridgeDbContext
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<EventSchema> EventSchemas => Set<EventSchema>();
     public DbSet<EventSchemaVersion> EventSchemaVersions => Set<EventSchemaVersion>();
+    public DbSet<WebhookSandbox> WebhookSandboxes => Set<WebhookSandbox>();
+    public DbSet<SandboxRequest> SandboxRequests => Set<SandboxRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

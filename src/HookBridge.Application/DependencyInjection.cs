@@ -113,6 +113,17 @@ public static class DependencyInjection
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Documentation.GetApiReferenceUseCase>();
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Documentation.GenerateDocSnippetUseCase>();
 
+        // Control Plane: Webhook Sandbox & Realtime Inspection
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Sandbox.CreateSandboxUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Sandbox.GetSandboxesUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Sandbox.GetSandboxByIdUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Sandbox.UpdateSandboxConfigUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Sandbox.DeleteSandboxUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Sandbox.GetSandboxRequestsUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Sandbox.GetSandboxRequestByIdUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Sandbox.ClearSandboxRequestsUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Sandbox.ProcessSandboxRequestUseCase>();
+
         return services;
     }
 }

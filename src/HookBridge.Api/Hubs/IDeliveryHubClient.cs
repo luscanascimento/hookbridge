@@ -31,4 +31,14 @@ public interface IDeliveryHubClient
     /// Invoked when a batch of deliveries have been replayed.
     /// </summary>
     Task BulkDeliveriesReplayed(IReadOnlyList<RealtimeDeliveryEvent> deliveryEvents);
+
+    /// <summary>
+    /// Invoked when an incoming request is captured by a webhook sandbox receiver.
+    /// </summary>
+    Task ReceiveSandboxRequest(HookBridge.Application.ControlPlane.UseCases.Sandbox.RealtimeSandboxEvent sandboxEvent);
+
+    /// <summary>
+    /// Invoked when sandbox request history is cleared.
+    /// </summary>
+    Task SandboxRequestsCleared(Guid sandboxId);
 }

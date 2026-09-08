@@ -7,6 +7,7 @@ import {
 } from '@microsoft/signalr';
 import { AuthService } from '../../auth/services/auth.service';
 import { HubConnectionStatus, RealtimeDeliveryEvent } from '../models/signalr.models';
+import { RealtimeSandboxEvent } from '../../models/sandbox.models';
 import { environment } from '../../../../environments/environment';
 
 const MAX_BUFFERED_EVENTS = 100;
@@ -22,6 +23,8 @@ export class SignalRService {
   readonly status = signal<HubConnectionStatus>('disconnected');
   readonly latestEvent = signal<RealtimeDeliveryEvent | null>(null);
   readonly events = signal<RealtimeDeliveryEvent[]>([]);
+  readonly latestSandboxEvent = signal<RealtimeSandboxEvent | null>(null);
+  readonly clearedSandboxId = signal<string | null>(null);
   readonly subscribedEndpoints = signal<Set<string>>(new Set());
 
   async startConnection(): Promise<void> {
@@ -173,6 +176,14 @@ export class SignalRService {
       for (const evt of events) {
         this.processDeliveryEvent(evt);
       }
+    });
+
+    connection.on('ReceiveSandboxRequest', (event: RealtimeSandboxEvent) => {
+      this.latestSandboxEvent.set(event);
+    });
+
+    connection.on('SandboxRequestsCleared', (sandboxId: string) => {
+      this.clearedSandboxId.set(sandboxId);
     });
   }
 
