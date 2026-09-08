@@ -77,6 +77,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/simulator/simulator.component').then(m => m.SimulatorComponent)
       },
       {
+        path: 'observability',
+        loadComponent: () => import('./features/observability/observability.component').then(m => m.ObservabilityComponent)
+      },
+      {
         path: '**',
         redirectTo: 'dashboard'
       }

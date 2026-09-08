@@ -29,6 +29,7 @@ var app = builder.Build();
 
 // 4. Security & Error Handling Pipeline
 app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseMiddleware<TraceContextEnricherMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -68,6 +69,7 @@ app.MapEventSchemaEndpoints();
 app.MapDocEndpoints();
 app.MapSandboxEndpoints();
 app.MapSimulatorEndpoints();
+app.MapObservabilityEndpoints();
 
 // 8. Map Real-time SignalR Hubs
 app.MapHub<DeliveryHub>("/hubs/deliveries");

@@ -139,6 +139,13 @@ public static class DependencyInjection
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.GetSimulatorStatsUseCase>();
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.TestDispatchSimulatorUseCase>();
 
+        // Control Plane: OpenTelemetry Observability, Metrics & Telemetry
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Observability.GetObservabilitySummaryUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Observability.GetMetricInstrumentsUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Observability.GetRecentCapturedSpansUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Observability.GenerateSyntheticTraceUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Observability.GetPrometheusMetricsUseCase>();
+
         return services;
     }
 }
