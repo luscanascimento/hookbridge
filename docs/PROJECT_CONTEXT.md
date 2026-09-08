@@ -306,9 +306,42 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
       - Interactive Test Dispatch Workbench allowing developers to send instant webhooks and observe live execution duration, status codes, and injected faults.
     - Full test suite: 268/268 unit and integration tests passing (209 unit + 59 integration); Angular production build clean with 0 errors and 0 warnings.
 
+23. **FASE 22 — OpenTelemetry Observability (Traces, Metrics, Logs, Jaeger)** (`78e3b57`)
+    - Backend OpenTelemetry Observability Engine (`HookBridgeDiagnostics`, `InMemoryTelemetryBuffer`, `PrometheusMetricsFormatter`, `TraceContextEnricherMiddleware`) under `HookBridge.Application/ControlPlane/UseCases/Observability/` and `HookBridge.Api/Endpoints/ObservabilityEndpoints.cs`:
+      - 16 registered OpenTelemetry metric instruments (`Meter`, `ActivitySource`, `Counters`, `Histogram`, `UpDownCounters`).
+      - In-memory thread-safe ring buffer processor (`InMemoryTelemetryBuffer`) capturing up to 200 distributed spans without requiring external infrastructure.
+      - Public Prometheus scrape endpoint (`GET /metrics`) exposing CLR process memory, GC collections, and domain metrics in Prometheus 0.0.4 text format.
+      - Programmatic synthetic trace pipeline generator (`POST /api/v1/observability/synthetic-trace`) simulating end-to-end ingestion, HMAC signing, PostgreSQL outbox persistence, and HTTP dispatch.
+      - Trace context propagation middleware (`TraceContextEnricherMiddleware`) extracting W3C `traceparent` and attaching `X-Trace-Id` / `X-Correlation-Id` headers.
+    - Angular frontend Observability Portal (`ObservabilityComponent`) under `/observability`:
+      - 4 KPI metric cards (Working Set MB, Managed Heap MB, GC Collections, Buffered Spans).
+      - Tab 1 (Metric Instruments): Filterable table of all 16 metrics + live Prometheus exposition viewer.
+      - Tab 2 (Captured Spans Buffer): Realtime list of spans with semantic tags and W3C baggage inspection.
+      - Tab 3 (Synthetic Pipeline Tester): Interactive trace generator with instant distributed waterfall DAG visualization.
+      - Tab 4 (Collector & Specs): OTLP runtime diagnostics and `prometheus.yml` configuration exporter.
+    - Full test suite: 280/280 tests passing; Angular production build clean.
+
+24. **FASE 23 — Adversarial Security Hardening (IDOR, SSRF, XSS, Replay)** (`d6f144d`)
+    - Comprehensive SSRF Guard hardening (`SsrfGuard.cs`):
+      - Protection against loopback, RFC 1918 private subnets, carrier-grade NAT, test nets, and multicast.
+      - Cloud metadata IP protection (AWS `169.254.169.254` & `fd00:ec2::254`, GCP `metadata.google.internal`, Alibaba `100.100.100.200`, Oracle `192.0.0.192`, AWS ECS `169.254.170.2`).
+      - Container & cluster hostname blocks (`host.docker.internal`, `gateway.docker.internal`, `*.cluster.local`, `*.internal`, `*.local`, `*.localhost`).
+      - Dangerous infrastructure port blocking (FTP 21, SSH 22, SMTP 25, MySQL 3306, Postgres 5432, Redis 6379, MongoDB 27017, K8s 6443, Elasticsearch 9200, Memcached 11211).
+      - Embedded userinfo/credentials in URLs disallowed.
+    - Webhook HMAC-SHA256 & Anti-Replay hardening (`WebhookSigner.cs`):
+      - Constant-time signature verification (`CryptographicOperations.FixedTimeEquals`).
+      - Strict timestamp tolerance (default 5 minutes) and future drift mitigation (max 60s future clock skew).
+      - Seamless dual-secret rotation grace period verification.
+    - Defensive Security Headers (`SecurityHeadersMiddleware.cs`):
+      - OWASP-compliant headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 0`, `Referrer-Policy: strict-origin-when-cross-origin`, `Content-Security-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, `HSTS`).
+    - Input Sanitization & XSS Neutralization (`InputSanitizer.cs`):
+      - Automated XSS vector detection (`<script>`, `javascript:`, `onerror=`, `onload=`, `<iframe>`, `<object>`) and URL-safe slug validation.
+    - Cross-Tenant IDOR validation across all queries, mutations, and domain models.
+    - Full test suite: 346/346 unit and integration tests passing (277 unit + 69 integration); Angular production build clean.
+
 ### Next Session Objective
-- **FASE 22 — OpenTelemetry Observability (Traces, Metrics, Logs, Jaeger)**:
-  - OpenTelemetry SDK integration, W3C TraceContext enrichment, OpenTelemetry Meter & ActivitySource instrumentation, Jaeger / OTLP exporter setup, and structured logs correlation.
-  - Target commit: `feat: add observability`.
+- **FASE 24 — Comprehensive Automated Test Suite (Unit, Integration, E2E)**:
+  - Expand test matrix across boundary conditions, mock failures, edge cases, concurrent requests, and end-to-end user workflows.
+  - Target commit: `test: expand automated test coverage`.
 
 
