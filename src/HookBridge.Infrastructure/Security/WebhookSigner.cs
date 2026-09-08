@@ -7,6 +7,8 @@ namespace HookBridge.Infrastructure.Security;
 
 public sealed class WebhookSigner : IWebhookSigner
 {
+    private const int MaxFutureDriftSeconds = 60; // Max allowed future timestamp clock drift
+
     public string ComputeHmacSha256(string rawPayload, string secretKey, long unixTimestamp)
     {
         ArgumentException.ThrowIfNullOrEmpty(secretKey);
@@ -93,16 +95,25 @@ public sealed class WebhookSigner : IWebhookSigner
             return Result.Failure<bool>(DomainError.Validation("Signature.MissingSignatures", "No v1 signature schemes found in header."));
         }
 
-        // 3. Validate anti-replay tolerance window
+        // 3. Validate anti-replay tolerance window and future drift
         var currentEpoch = (now ?? DateTimeOffset.UtcNow).ToUnixTimeSeconds();
         var allowedTolerance = (long)(tolerance?.TotalSeconds ?? IWebhookSigner.DefaultToleranceSeconds);
-        var diff = Math.Abs(currentEpoch - timestamp);
 
-        if (diff > allowedTolerance)
+        // Reject excessive future timestamps (future replay spoofing)
+        if (timestamp > currentEpoch + MaxFutureDriftSeconds)
+        {
+            return Result.Failure<bool>(DomainError.Validation(
+                "Signature.FutureTimestamp",
+                $"Timestamp {timestamp} is too far in the future (current: {currentEpoch}). Clock drift exceeds {MaxFutureDriftSeconds}s."));
+        }
+
+        // Reject expired timestamps (past replay attacks)
+        var age = currentEpoch - timestamp;
+        if (age > allowedTolerance)
         {
             return Result.Failure<bool>(DomainError.Validation(
                 "Signature.TimestampOutOfTolerance",
-                $"Timestamp {timestamp} is outside the allowed tolerance window of {allowedTolerance} seconds (difference: {diff}s)."));
+                $"Timestamp {timestamp} is expired. Webhook signature age is {age}s, exceeding maximum tolerance window of {allowedTolerance}s."));
         }
 
         // 4. Constant-time verification against candidate secrets

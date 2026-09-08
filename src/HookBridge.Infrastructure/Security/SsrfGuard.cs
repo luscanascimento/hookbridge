@@ -9,6 +9,59 @@ namespace HookBridge.Infrastructure.Security;
 
 public sealed partial class SsrfGuard : ISsrfGuard
 {
+    private static readonly HashSet<int> ProhibitedPorts = new()
+    {
+        21,    // FTP
+        22,    // SSH
+        23,    // Telnet
+        25,    // SMTP
+        53,    // DNS
+        69,    // TFTP
+        110,   // POP3
+        143,   // IMAP
+        389,   // LDAP
+        636,   // LDAPS
+        1433,  // MS SQL
+        1521,  // Oracle DB
+        2375,  // Docker daemon unencrypted
+        2376,  // Docker daemon TLS
+        3306,  // MySQL
+        5432,  // PostgreSQL
+        6379,  // Redis
+        6443,  // Kubernetes API
+        9200,  // Elasticsearch
+        10250, // Kubelet
+        11211, // Memcached
+        27017  // MongoDB
+    };
+
+    private static readonly string[] ProhibitedDomainSuffixes =
+    [
+        ".localhost",
+        ".local",
+        ".internal",
+        ".lan",
+        ".home",
+        ".corp",
+        ".cluster.local",
+        ".svc",
+        ".localdomain"
+    ];
+
+    private static readonly string[] ProhibitedExactHostnames =
+    [
+        "localhost",
+        "metadata.google.internal",
+        "instance-data",
+        "host.docker.internal",
+        "gateway.docker.internal",
+        "kubernetes.default.svc",
+        "169.254.169.254",
+        "169.254.170.2",
+        "100.100.100.200",
+        "192.0.0.192"
+    ];
+
     private readonly SsrfOptions _options;
     private readonly ILogger<SsrfGuard> _logger;
 
@@ -47,9 +100,21 @@ public sealed partial class SsrfGuard : ISsrfGuard
             return Result.Failure<bool>(DomainError.Validation("Ssrf.InvalidScheme", $"The URI scheme '{uri.Scheme}' is not allowed. Only HTTP and HTTPS are permitted."));
         }
 
-        if (uri.Port != 80 && uri.Port != 443 && (uri.Port < 1024 || uri.Port > 65535))
+        // Prohibit embedded credentials in userinfo (e.g. http://user:pass@host)
+        if (!string.IsNullOrEmpty(uri.UserInfo))
+        {
+            return Result.Failure<bool>(DomainError.Validation("Ssrf.UserInfoProhibited", "Embedded userinfo/credentials in destination URLs are prohibited."));
+        }
+
+        // Prohibit dangerous infrastructure/database ports
+        if (ProhibitedPorts.Contains(uri.Port))
         {
             return Result.Failure<bool>(DomainError.Validation("Ssrf.InvalidPort", $"Port {uri.Port} is prohibited for webhook deliveries."));
+        }
+
+        if (uri.Port != 80 && uri.Port != 443 && (uri.Port < 1024 || uri.Port > 65535))
+        {
+            return Result.Failure<bool>(DomainError.Validation("Ssrf.InvalidPort", $"Port {uri.Port} is outside the permitted ranges for webhook endpoints."));
         }
 
         if (!_options.Enabled)
@@ -57,28 +122,28 @@ public sealed partial class SsrfGuard : ISsrfGuard
             return Result.Success(true);
         }
 
-        var host = uri.Host.Trim().ToLowerInvariant();
+        var host = uri.DnsSafeHost.Trim().ToLowerInvariant();
 
-        // 1. Check explicitly allowed hosts
+        // 1. Check explicitly allowed hosts (whitelist bypass for testing)
         if (_options.AllowedHosts.Any(h => string.Equals(h, host, StringComparison.OrdinalIgnoreCase)))
         {
             return Result.Success(true);
         }
 
-        // 2. Block direct localhost / reserved hostnames
+        // 2. Block direct localhost / cloud metadata / container hostnames
         if (IsProhibitedHostname(host))
         {
             LogProhibitedHost(_logger, host);
             return Result.Failure<bool>(DomainError.Validation("Ssrf.ProhibitedHost", $"Destination host '{host}' is prohibited for webhook endpoints."));
         }
 
-        // 3. Direct IP checking
+        // 3. Direct IP checking (IPv4 and IPv6)
         if (IPAddress.TryParse(host, out var directIp))
         {
             if (IsProhibitedIpAddress(directIp))
             {
                 LogProhibitedIp(_logger, directIp);
-                return Result.Failure<bool>(DomainError.Validation("Ssrf.ProhibitedIp", $"Destination IP '{directIp}' is prohibited."));
+                return Result.Failure<bool>(DomainError.Validation("Ssrf.ProhibitedIp", $"Destination IP '{directIp}' is private, loopback, or metadata address."));
             }
 
             return Result.Success(true);
@@ -116,13 +181,12 @@ public sealed partial class SsrfGuard : ISsrfGuard
 
     private static bool IsProhibitedHostname(string host)
     {
-        return host == "localhost"
-            || host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase)
-            || host.EndsWith(".local", StringComparison.OrdinalIgnoreCase)
-            || host.EndsWith(".internal", StringComparison.OrdinalIgnoreCase)
-            || host == "metadata.google.internal"
-            || host == "instance-data"
-            || host == "169.254.169.254";
+        if (ProhibitedExactHostnames.Contains(host, StringComparer.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return ProhibitedDomainSuffixes.Any(suffix => host.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
     }
 
     public static bool IsProhibitedIpAddress(IPAddress ipAddress)
@@ -132,9 +196,14 @@ public sealed partial class SsrfGuard : ISsrfGuard
             return true;
         }
 
+        if (ipAddress.Equals(IPAddress.Any) || ipAddress.Equals(IPAddress.IPv6Any) || ipAddress.Equals(IPAddress.None))
+        {
+            return true;
+        }
+
         if (ipAddress.AddressFamily == AddressFamily.InterNetworkV6)
         {
-            if (ipAddress.IsIPv6LinkLocal || ipAddress.IsIPv6SiteLocal || ipAddress.IsIPv6Multicast)
+            if (ipAddress.IsIPv6LinkLocal || ipAddress.IsIPv6SiteLocal || ipAddress.IsIPv6Multicast || ipAddress.IsIPv6Teredo)
             {
                 return true;
             }
@@ -145,8 +214,21 @@ public sealed partial class SsrfGuard : ISsrfGuard
             }
 
             var v6Bytes = ipAddress.GetAddressBytes();
-            // fc00::/7 Unique Local Address
+
+            // ::1 (Loopback)
+            if (ipAddress.Equals(IPAddress.IPv6Loopback))
+            {
+                return true;
+            }
+
+            // fc00::/7 Unique Local Address (Private IPv6)
             if ((v6Bytes[0] & 0xfe) == 0xfc)
+            {
+                return true;
+            }
+
+            // AWS IMDSv2 IPv6 (fd00:ec2::254)
+            if (v6Bytes[0] == 0xfd && v6Bytes[1] == 0x00 && v6Bytes[2] == 0x0e && v6Bytes[3] == 0xc2)
             {
                 return true;
             }
@@ -156,23 +238,27 @@ public sealed partial class SsrfGuard : ISsrfGuard
 
         var bytes = ipAddress.GetAddressBytes();
 
-        // 0.0.0.0/8 (Current network)
+        // 0.0.0.0/8 (Current network / default route)
         if (bytes[0] == 0) return true;
 
         // 10.0.0.0/8 (Private RFC 1918)
         if (bytes[0] == 10) return true;
 
-        // 100.64.0.0/10 (Carrier-Grade NAT)
+        // 100.64.0.0/10 (Carrier-Grade NAT & Alibaba IMDS 100.100.100.200)
         if (bytes[0] == 100 && (bytes[1] & 0xc0) == 64) return true;
+        if (bytes[0] == 100 && bytes[1] == 100 && bytes[2] == 100 && bytes[3] == 200) return true;
 
         // 127.0.0.0/8 (Loopback)
         if (bytes[0] == 127) return true;
 
-        // 169.254.0.0/16 (Link-Local & Cloud Metadata 169.254.169.254)
+        // 169.254.0.0/16 (Link-Local & Cloud Metadata 169.254.169.254, ECS 169.254.170.2)
         if (bytes[0] == 169 && bytes[1] == 254) return true;
 
         // 172.16.0.0/12 (Private RFC 1918)
         if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) return true;
+
+        // 192.0.0.0/24 (IETF Protocol Assignments & Oracle IMDS 192.0.0.192)
+        if (bytes[0] == 192 && bytes[1] == 0 && bytes[2] == 0) return true;
 
         // 192.0.2.0/24 (TEST-NET-1)
         if (bytes[0] == 192 && bytes[1] == 0 && bytes[2] == 2) return true;
