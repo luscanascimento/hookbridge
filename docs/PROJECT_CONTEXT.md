@@ -278,8 +278,37 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
       - Grouped REST API reference with parameter tables, header definitions, request/response JSON viewers, and deep links to relevant HookBridge portal tools (Payload Inspector, Live Inspector, Schema Registry).
     - Full test suite: 241/241 unit and integration tests passing (192 unit + 49 integration); Angular production build clean with 0 errors and 0 warnings.
 
+21. **FASE 20 — Webhook Sandbox Receiver & Realtime Inspection** (`fa0c64a`)
+    - Ephemeral webhook receiver engine (`WebhookSandbox`, `SandboxRequest`) with customizable default status codes, response delay, and response payload body.
+    - Public webhook intake endpoint (`/api/v1/sandbox/receiver/{slug}`) allowing third-party services to deliver webhooks without auth.
+    - Realtime SignalR notification stream (`ReceiveSandboxRequest`, `SandboxRequestsCleared`).
+    - Angular frontend Sandbox portal (`SandboxComponent`) under `/sandbox` with live request inspection drawer and JSON payload viewer.
+    - Full test suite: 252/252 unit and integration tests passing (199 unit + 53 integration); Angular production build clean.
+
+22. **FASE 21 — Delivery Failure Simulator (200, 429, 500, Timeout, Chaos)** (`feat: add delivery failure simulator`)
+    - Backend Chaos & Failure Simulation Engine (`SimulatorRule`, `SimulatorExecution`, `SimulatorStrategy` enum) under `HookBridge.Application/ControlPlane/UseCases/Simulator/` and `HookBridge.Api/Endpoints/SimulatorEndpoints.cs`:
+      - Deterministic status responses (200, 400, 401, 403, 404, 422, 429, 500, 502, 503, 504).
+      - Strategy evaluation:
+        - `FixedStatus`: Deterministic return of target error or success code.
+        - `FailureRate`: Configurable failure probability ($X\%$) for chaos and flakiness verification.
+        - `SequentialRetryPattern`: Statefully fails the first $N$ attempts (e.g. 2 times 503) and then recovers with 200 OK to test retry exponential backoff policies. Includes dedicated step counter reset endpoint.
+        - `Timeout`: Induces configurable latency delays (e.g. 5000ms) or returns HTTP 504 Gateway Timeout.
+        - `ChaosJitter`: Injects random latency jitter and dynamically draws status codes from an error pool (429, 500, 502, 503, 504).
+        - `MalformedJson`: Returns invalid/corrupted JSON payloads to test client deserialization error handling.
+      - Automated rate limiting headers: Injects `Retry-After: 30`, `X-RateLimit-Limit`, and `X-RateLimit-Remaining: 0` for 429 responses.
+      - Public and ad-hoc receiver endpoints (`/api/v1/simulator/receive/{slug}`, `/api/v1/simulator/http/{code}`, `/api/v1/simulator/timeout`, `/api/v1/simulator/chaos`).
+      - Realtime SignalR streaming (`ISimulatorRealtimeNotifier`, `ReceiveSimulatorExecution`, `SimulatorExecutionsCleared`).
+    - Angular frontend Failure Simulator & Chaos Lab (`SimulatorComponent`) under `/simulator`:
+      - Quick Presets Toolbar with 1-click test URL generator and copy buttons.
+      - KPI metric cards (Total Invocations, Failure Rate %, Average Latency ms, Active Rules).
+      - Chaos Rule Designer with live sliders, presets, and response header/body JSON editors.
+      - Live Executions Table with SignalR real-time stream, pause/resume, search, and deep-dive SlideOver inspector.
+      - Interactive Test Dispatch Workbench allowing developers to send instant webhooks and observe live execution duration, status codes, and injected faults.
+    - Full test suite: 268/268 unit and integration tests passing (209 unit + 59 integration); Angular production build clean with 0 errors and 0 warnings.
+
 ### Next Session Objective
-- **FASE 20 — Webhook Sandbox Receiver & Realtime Inspection**:
-  - Webhook sandbox receiver endpoints (ephemeral URLs for testing incoming webhooks), real-time inspection, payload capture, response simulation, and live websocket streaming.
-  - Target commit: `feat: add webhook sandbox`.
+- **FASE 22 — OpenTelemetry Observability (Traces, Metrics, Logs, Jaeger)**:
+  - OpenTelemetry SDK integration, W3C TraceContext enrichment, OpenTelemetry Meter & ActivitySource instrumentation, Jaeger / OTLP exporter setup, and structured logs correlation.
+  - Target commit: `feat: add observability`.
+
 

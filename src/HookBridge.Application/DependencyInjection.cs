@@ -124,6 +124,21 @@ public static class DependencyInjection
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Sandbox.ClearSandboxRequestsUseCase>();
         services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Sandbox.ProcessSandboxRequestUseCase>();
 
+        // Control Plane: Delivery Failure Simulator & Chaos Testing
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.CreateSimulatorRuleUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.GetSimulatorRulesUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.GetSimulatorRuleByIdUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.UpdateSimulatorRuleUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.DeleteSimulatorRuleUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.ResetSimulatorRuleStepsUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.ProcessSimulatorRequestUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.ExecuteAdHocSimulationUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.GetSimulatorExecutionsUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.GetSimulatorExecutionByIdUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.ClearSimulatorExecutionsUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.GetSimulatorStatsUseCase>();
+        services.AddScoped<HookBridge.Application.ControlPlane.UseCases.Simulator.TestDispatchSimulatorUseCase>();
+
         return services;
     }
 }

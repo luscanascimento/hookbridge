@@ -103,6 +103,14 @@ import { LiveIndicatorComponent } from '../ui/live-indicator.component';
               <span>Sandbox</span>
             </a>
 
+            <a routerLink="/simulator" routerLinkActive="bg-brand-600/15 text-brand-300 border-brand-500/40 font-medium"
+               class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-surface-300 hover:bg-surface-800 hover:text-white transition-colors border border-transparent">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              <span>Simulator</span>
+            </a>
+
             <div class="pt-3 pb-1 px-3 text-[11px] font-semibold text-surface-500 uppercase tracking-wider">
               Management
             </div>

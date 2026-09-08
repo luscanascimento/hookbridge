@@ -16,6 +16,7 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IDeliveryRealtimeNotifier, DeliveryRealtimeNotifier>();
 builder.Services.AddSingleton<ISandboxRealtimeNotifier, SandboxRealtimeNotifier>();
+builder.Services.AddSingleton<ISimulatorRealtimeNotifier, SimulatorRealtimeNotifier>();
 
 // 3. Exception Handling & RFC 7807 ProblemDetails
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -66,6 +67,7 @@ app.MapPayloadEndpoints();
 app.MapEventSchemaEndpoints();
 app.MapDocEndpoints();
 app.MapSandboxEndpoints();
+app.MapSimulatorEndpoints();
 
 // 8. Map Real-time SignalR Hubs
 app.MapHub<DeliveryHub>("/hubs/deliveries");

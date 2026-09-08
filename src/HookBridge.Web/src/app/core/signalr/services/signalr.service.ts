@@ -8,6 +8,7 @@ import {
 import { AuthService } from '../../auth/services/auth.service';
 import { HubConnectionStatus, RealtimeDeliveryEvent } from '../models/signalr.models';
 import { RealtimeSandboxEvent } from '../../models/sandbox.models';
+import { RealtimeSimulatorEvent } from '../../models/simulator.models';
 import { environment } from '../../../../environments/environment';
 
 const MAX_BUFFERED_EVENTS = 100;
@@ -25,6 +26,8 @@ export class SignalRService {
   readonly events = signal<RealtimeDeliveryEvent[]>([]);
   readonly latestSandboxEvent = signal<RealtimeSandboxEvent | null>(null);
   readonly clearedSandboxId = signal<string | null>(null);
+  readonly latestSimulatorEvent = signal<RealtimeSimulatorEvent | null>(null);
+  readonly clearedSimulatorRuleId = signal<string | null>(null);
   readonly subscribedEndpoints = signal<Set<string>>(new Set());
 
   async startConnection(): Promise<void> {
@@ -184,6 +187,14 @@ export class SignalRService {
 
     connection.on('SandboxRequestsCleared', (sandboxId: string) => {
       this.clearedSandboxId.set(sandboxId);
+    });
+
+    connection.on('ReceiveSimulatorExecution', (event: RealtimeSimulatorEvent) => {
+      this.latestSimulatorEvent.set(event);
+    });
+
+    connection.on('SimulatorExecutionsCleared', (ruleId?: string) => {
+      this.clearedSimulatorRuleId.set(ruleId ?? 'all');
     });
   }
 

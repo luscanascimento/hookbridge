@@ -39,6 +39,8 @@ public sealed class HookBridgeDbContext : DbContext, IHookBridgeDbContext
     public DbSet<EventSchemaVersion> EventSchemaVersions => Set<EventSchemaVersion>();
     public DbSet<WebhookSandbox> WebhookSandboxes => Set<WebhookSandbox>();
     public DbSet<SandboxRequest> SandboxRequests => Set<SandboxRequest>();
+    public DbSet<SimulatorRule> SimulatorRules => Set<SimulatorRule>();
+    public DbSet<SimulatorExecution> SimulatorExecutions => Set<SimulatorExecution>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

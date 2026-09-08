@@ -73,6 +73,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/sandbox/sandbox.component').then(m => m.SandboxComponent)
       },
       {
+        path: 'simulator',
+        loadComponent: () => import('./features/simulator/simulator.component').then(m => m.SimulatorComponent)
+      },
+      {
         path: '**',
         redirectTo: 'dashboard'
       }

@@ -24,6 +24,8 @@ public interface IHookBridgeDbContext
     DbSet<EventSchemaVersion> EventSchemaVersions { get; }
     DbSet<WebhookSandbox> WebhookSandboxes { get; }
     DbSet<SandboxRequest> SandboxRequests { get; }
+    DbSet<SimulatorRule> SimulatorRules { get; }
+    DbSet<SimulatorExecution> SimulatorExecutions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -41,4 +41,14 @@ public interface IDeliveryHubClient
     /// Invoked when sandbox request history is cleared.
     /// </summary>
     Task SandboxRequestsCleared(Guid sandboxId);
+
+    /// <summary>
+    /// Invoked when an incoming request is captured by a delivery failure simulator rule or ad-hoc mock.
+    /// </summary>
+    Task ReceiveSimulatorExecution(HookBridge.Application.ControlPlane.UseCases.Simulator.RealtimeSimulatorEvent simulatorEvent);
+
+    /// <summary>
+    /// Invoked when simulator execution history is cleared.
+    /// </summary>
+    Task SimulatorExecutionsCleared(Guid? ruleId);
 }
