@@ -339,9 +339,33 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
     - Cross-Tenant IDOR validation across all queries, mutations, and domain models.
     - Full test suite: 346/346 unit and integration tests passing (277 unit + 69 integration); Angular production build clean.
 
+25. **FASE 24 — Comprehensive Automated Test Suite (Unit, Integration, E2E)** (`test: expand automated test coverage`)
+    - Comprehensive End-to-End Pipeline Integration Suite (`EndToEndWebhookLifecycleTests.cs`):
+      - Complete multi-tenant lifecycle from registration, authentication, API Key issuance (`hb_live_...`), application and endpoint setup with wildcard subscriptions (`order.*`, `*`), zero-downtime secret rotation (`RotateSecretResponse`), schema creation and versioning, event publishing via API Key, dual delivery scheduling, historical attempt recording with exponential backoff status transitions, delivery details inspection, single replay with lineage chain validation, aggregated statistics, health scores, and full audit trail ledger verification.
+    - Concurrency & Race Condition Suite (`ConcurrentOperationsTests.cs`):
+      - Thread-safe delivery attempt recording across multiple deliveries simultaneously.
+      - High-throughput parallel event publishing with multi-endpoint routing.
+      - Concurrent bulk delivery replay execution.
+    - Adversarial Boundary & Security Hardening Integration Suite (`AdversarialBoundaryIntegrationTests.cs`):
+      - Deeply nested JSON payloads (20+ levels) with multi-byte Unicode emoji glyphs and surrogate pairs analyzed and validated.
+      - Malicious JSONPath injection vectors (path traversal, script tags, SQL-like injection strings).
+      - Cross-tenant IDOR protection across replay, lineage inspection, attempt recording, and endpoint health diagnostics.
+      - Token tampering, invalid signatures, and malformed header rejection.
+      - Rapid-fire failure simulator fault injection with automatic `Retry-After` rate limit headers.
+    - Boundary & Edge Case Unit Test Suite (`EdgeCaseAndBoundaryUnitTests.cs` & `ObservabilityEdgeCaseTests.cs`):
+      - Subscription pattern matching boundary conditions (universal wildcard `*`, prefix wildcards `order.*`, case-insensitivity, special character handling).
+      - HMAC-SHA256 signature verification edge cases (exact 300s tolerance limit, 301s expiration, +45s allowed clock drift, +65s rejected drift, dual-secret header verification).
+      - Schema compatibility checker boundary tests across Full, Backward, None modes.
+      - Schema code generator with C# and TypeScript reserved keywords (`class`, `event`, `namespace`, `interface`).
+      - Deeply nested structural payload diffing and JSONPath evaluations.
+      - Endpoint health score clamp calculations, 3-consecutive-failure `HalfOpen` and 5-consecutive-failure `Open` circuit breaker transitions.
+      - Simulator sequential retry step counter rollover and reset.
+      - `InMemoryTelemetryBuffer` 200-item ring buffer eviction policy and thread-safe parallel span recording.
+    - Full test suite: 394/394 unit and integration tests passing (312 unit + 82 integration); Angular production build and typecheck clean with 0 errors.
+
 ### Next Session Objective
-- **FASE 24 — Comprehensive Automated Test Suite (Unit, Integration, E2E)**:
-  - Expand test matrix across boundary conditions, mock failures, edge cases, concurrent requests, and end-to-end user workflows.
-  - Target commit: `test: expand automated test coverage`.
+- **FASE 25 — Distributed Chaos & Failure Testing (Broker/DB Outages)**:
+  - Add fault injection scenarios for message broker disconnects, database timeouts, and transient network partition recovery.
+  - Target commit: `test: add distributed failure scenarios`.
 
 
