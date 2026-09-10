@@ -1,0 +1,121 @@
+services:
+  hookbridge-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hookbridge-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=hookbridge_db;Username=postgres;Password=postgres
+      - OpenTelemetry__OtlpEndpoint=http://jaeger:4317
+      - EventFlow__BaseUrl=http://eventflow-api:5000
+      - EventFlow__ApiKey=${EVENTFLOW_API_KEY:-ef_live_secret_key_1234567890}
+      - Jwt__SecretKey=${JWT_SECRET_KEY:-hb_super_secret_jwt_signing_key_minimum_32_characters_long_2026!}
+      - Jwt__Issuer=HookBridge
+      - Jwt__Audience=HookBridgeClients
+      - Jwt__ExpirationMinutes=60
+      - Jwt__RefreshTokenExpirationDays=7
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - hookbridge-net
+
+  hookbridge-web:
+    build:
+      context: ./src/HookBridge.Web
+      dockerfile: Dockerfile
+    container_name: hookbridge-web
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    depends_on:
+      - hookbridge-api
+    networks:
+      - hookbridge-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: hookbridge-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=hookbridge_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hookbridge_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hookbridge-net
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: hookbridge-rabbitmq
+    restart: unless-stopped
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hookbridge-net
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: hookbridge-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - hookbridge-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    container_name: hookbridge-jaeger
+    restart: unless-stopped
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - hookbridge-net
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  redis-data:
+
+networks:
+  hookbridge-net:
+    driver: bridge
