@@ -11,6 +11,7 @@ namespace HookBridge.Infrastructure.Telemetry;
 
 public static class TelemetryExtensions
 {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Singleton instance managed for application lifetime in DI")]
     public static IServiceCollection AddHookBridgeTelemetry(this IServiceCollection services, IConfiguration configuration)
     {
         var inMemoryBuffer = new InMemoryTelemetryBuffer();
