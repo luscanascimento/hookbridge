@@ -78,11 +78,26 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
     public new async Task DisposeAsync()
     {
-        if (_connection != null)
+        try
         {
-            await _connection.DisposeAsync();
+            if (_connection != null)
+            {
+                await _connection.DisposeAsync();
+                _connection = null;
+            }
+        }
+        catch
+        {
+            // Ignore connection disposal errors during test host teardown
         }
 
-        await base.DisposeAsync();
+        try
+        {
+            await base.DisposeAsync();
+        }
+        catch
+        {
+            // Ignore base teardown errors
+        }
     }
 }
