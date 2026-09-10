@@ -34,6 +34,8 @@ public sealed class EndpointConfiguration : IEntityTypeConfiguration<Endpoint>
 
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => e.ApplicationId);
+        builder.HasIndex(e => new { e.TenantId, e.Status });
+        builder.HasIndex(e => new { e.TenantId, e.ApplicationId, e.Status });
 
         builder.HasMany(e => e.Secrets)
             .WithOne()

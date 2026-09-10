@@ -25,6 +25,7 @@ public sealed class GetDeliveriesUseCase
 
         var tenantId = _tenantContext.TenantId.Value;
         var baseQuery = _dbContext.Deliveries
+            .AsNoTracking()
             .Where(d => d.TenantId == tenantId);
 
         if (query.EndpointId.HasValue)
@@ -64,7 +65,7 @@ public sealed class GetDeliveriesUseCase
         var pageSize = Math.Clamp(query.PageSize, 1, 100);
 
         var items = await (from d in baseQuery
-                           join e in _dbContext.Endpoints on d.EndpointId equals e.Id into epGroup
+                           join e in _dbContext.Endpoints.AsNoTracking() on d.EndpointId equals e.Id into epGroup
                            from ep in epGroup.DefaultIfEmpty()
                            orderby d.CreatedAt descending
                            select new DeliveryResponse(

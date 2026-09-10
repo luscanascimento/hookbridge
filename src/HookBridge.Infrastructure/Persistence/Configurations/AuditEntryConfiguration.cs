@@ -37,5 +37,7 @@ public sealed class AuditEntryConfiguration : IEntityTypeConfiguration<AuditEntr
             .HasMaxLength(128);
 
         builder.HasIndex(a => new { a.TenantId, a.Timestamp });
+        builder.HasIndex(a => new { a.TenantId, a.TraceId });
+        builder.HasIndex(a => new { a.TenantId, a.ResourceType, a.ResourceId });
     }
 }

@@ -26,5 +26,7 @@ public sealed class AttemptConfiguration : IEntityTypeConfiguration<Attempt>
 
         builder.HasIndex(a => a.DeliveryId);
         builder.HasIndex(a => a.TenantId);
+        builder.HasIndex(a => new { a.TenantId, a.DeliveryId, a.AttemptNumber });
+        builder.HasIndex(a => new { a.TenantId, a.ExecutedAt });
     }
 }

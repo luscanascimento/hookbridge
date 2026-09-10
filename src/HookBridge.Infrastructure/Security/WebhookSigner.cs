@@ -1,3 +1,6 @@
+using System.Buffers;
+using System.Buffers.Text;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using HookBridge.Application.Abstractions;
@@ -14,13 +17,9 @@ public sealed class WebhookSigner : IWebhookSigner
         ArgumentException.ThrowIfNullOrEmpty(secretKey);
         rawPayload ??= string.Empty;
 
-        var canonicalPayload = $"{unixTimestamp}.{rawPayload}";
-        var keyBytes = Encoding.UTF8.GetBytes(secretKey);
-        var payloadBytes = Encoding.UTF8.GetBytes(canonicalPayload);
-
-        using var hmac = new HMACSHA256(keyBytes);
-        var hashBytes = hmac.ComputeHash(payloadBytes);
-        return Convert.ToHexString(hashBytes).ToLowerInvariant();
+        Span<byte> hashBytes = stackalloc byte[32];
+        ComputeHmacSha256Bytes(rawPayload, secretKey, unixTimestamp, hashBytes);
+        return Convert.ToHexStringLower(hashBytes);
     }
 
     public string GenerateSignatureHeader(string rawPayload, string secretKey, DateTimeOffset timestamp)
@@ -120,18 +119,24 @@ public sealed class WebhookSigner : IWebhookSigner
         rawPayload ??= string.Empty;
         var matched = false;
 
+        Span<byte> expectedBytes = stackalloc byte[64];
+        Span<byte> receivedBytes = stackalloc byte[64];
+
         foreach (var secret in secrets)
         {
             var expectedSignature = ComputeHmacSha256(rawPayload, secret, timestamp);
-            var expectedBytes = Encoding.UTF8.GetBytes(expectedSignature);
+            Encoding.UTF8.GetBytes(expectedSignature, expectedBytes);
 
             foreach (var receivedSig in signatures)
             {
-                var receivedBytes = Encoding.UTF8.GetBytes(receivedSig);
-                if (CryptographicOperations.FixedTimeEquals(expectedBytes, receivedBytes))
+                if (receivedSig.Length == 64)
                 {
-                    matched = true;
-                    break;
+                    Encoding.UTF8.GetBytes(receivedSig, receivedBytes);
+                    if (CryptographicOperations.FixedTimeEquals(expectedBytes, receivedBytes))
+                    {
+                        matched = true;
+                        break;
+                    }
                 }
             }
 
@@ -162,5 +167,59 @@ public sealed class WebhookSigner : IWebhookSigner
         }
 
         return VerifySignature(rawPayload, signatureHeader, [secretKey], tolerance, now);
+    }
+
+    private static void ComputeHmacSha256Bytes(string rawPayload, string secretKey, long unixTimestamp, Span<byte> destination)
+    {
+        var keyByteCount = Encoding.UTF8.GetByteCount(secretKey);
+        byte[]? rentedKey = null;
+        Span<byte> keySpan = keyByteCount <= 256
+            ? stackalloc byte[keyByteCount]
+            : (rentedKey = ArrayPool<byte>.Shared.Rent(keyByteCount)).AsSpan(0, keyByteCount);
+
+        try
+        {
+            Encoding.UTF8.GetBytes(secretKey, keySpan);
+
+            Span<byte> tsBuffer = stackalloc byte[32];
+            if (!Utf8Formatter.TryFormat(unixTimestamp, tsBuffer, out var tsWritten))
+            {
+                tsWritten = Encoding.UTF8.GetBytes(unixTimestamp.ToString(CultureInfo.InvariantCulture), tsBuffer);
+            }
+
+            var rawByteCount = Encoding.UTF8.GetByteCount(rawPayload);
+            var totalPayloadBytes = tsWritten + 1 + rawByteCount;
+
+            byte[]? rentedPayload = null;
+            Span<byte> payloadSpan = totalPayloadBytes <= 1024
+                ? stackalloc byte[totalPayloadBytes]
+                : (rentedPayload = ArrayPool<byte>.Shared.Rent(totalPayloadBytes)).AsSpan(0, totalPayloadBytes);
+
+            try
+            {
+                tsBuffer[..tsWritten].CopyTo(payloadSpan);
+                payloadSpan[tsWritten] = (byte)'.';
+                if (rawByteCount > 0)
+                {
+                    Encoding.UTF8.GetBytes(rawPayload, payloadSpan[(tsWritten + 1)..]);
+                }
+
+                HMACSHA256.HashData(keySpan, payloadSpan, destination);
+            }
+            finally
+            {
+                if (rentedPayload != null)
+                {
+                    ArrayPool<byte>.Shared.Return(rentedPayload);
+                }
+            }
+        }
+        finally
+        {
+            if (rentedKey != null)
+            {
+                ArrayPool<byte>.Shared.Return(rentedKey);
+            }
+        }
     }
 }

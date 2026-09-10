@@ -26,35 +26,43 @@ public sealed class GetDeliveryStatsUseCase
 
         var tenantId = _tenantContext.TenantId.Value;
 
-        var deliveries = await _dbContext.Deliveries
+        // 1. Efficient GroupBy aggregation on delivery statuses
+        var statusCounts = await _dbContext.Deliveries
+            .AsNoTracking()
             .Where(d => d.TenantId == tenantId)
-            .Select(d => d.Status)
+            .GroupBy(d => d.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);
 
-        var total = deliveries.Count;
-        var successful = deliveries.Count(s => s == DeliveryStatus.Success);
-        var failed = deliveries.Count(s => s == DeliveryStatus.Failed);
-        var pending = deliveries.Count(s => s == DeliveryStatus.Pending || s == DeliveryStatus.Dispatched);
-        var deadLettered = deliveries.Count(s => s == DeliveryStatus.DeadLettered);
+        var successful = statusCounts.FirstOrDefault(s => s.Status == DeliveryStatus.Success)?.Count ?? 0;
+        var failed = statusCounts.FirstOrDefault(s => s.Status == DeliveryStatus.Failed)?.Count ?? 0;
+        var pending = statusCounts.Where(s => s.Status == DeliveryStatus.Pending || s.Status == DeliveryStatus.Dispatched).Sum(s => s.Count);
+        var deadLettered = statusCounts.FirstOrDefault(s => s.Status == DeliveryStatus.DeadLettered)?.Count ?? 0;
+        var total = statusCounts.Sum(s => s.Count);
 
         var successRate = total > 0 ? Math.Round((double)successful / total * 100, 2) : 100.0;
 
-        var attempts = await _dbContext.Attempts
+        // 2. Efficient database-level average latency calculation
+        var avgLatencyResult = await _dbContext.Attempts
+            .AsNoTracking()
             .Where(a => a.TenantId == tenantId)
-            .Select(a => a.ElapsedMs)
-            .ToListAsync(cancellationToken);
+            .Select(a => (double?)a.ElapsedMs)
+            .AverageAsync(cancellationToken);
 
-        var avgLatency = attempts.Count > 0 ? Math.Round(attempts.Average(), 2) : 0.0;
+        var avgLatency = avgLatencyResult.HasValue ? Math.Round(avgLatencyResult.Value, 2) : 0.0;
 
         var now = DateTimeOffset.UtcNow;
         var start24h = now.AddHours(-23);
 
+        // 3. Fast time-series querying constrained to the 24h window
         var recentDeliveries = await _dbContext.Deliveries
+            .AsNoTracking()
             .Where(d => d.TenantId == tenantId && d.CreatedAt >= start24h)
             .Select(d => new { d.CreatedAt, d.Status })
             .ToListAsync(cancellationToken);
 
         var recentAttempts = await _dbContext.Attempts
+            .AsNoTracking()
             .Where(a => a.TenantId == tenantId && a.ExecutedAt >= start24h)
             .Select(a => new { a.ExecutedAt, a.ElapsedMs })
             .ToListAsync(cancellationToken);

@@ -36,8 +36,8 @@
 | **FASE 22** | **OpenTelemetry Observability (Traces, Metrics, Logs, Jaeger)** | ✅ **DONE** | `feat: add observability` (`78e3b57`) |
 | **FASE 23** | **Adversarial Security Hardening (IDOR, SSRF, XSS, Replay)** | ✅ **DONE** | `fix: harden application security` |
 | **FASE 25** | **Distributed Chaos & Failure Testing (Broker/DB Outages)** | ✅ **DONE** | `test: add distributed failure scenarios` |
-| **FASE 26** | **Performance & Bottleneck Profiling** | ⏳ *Next* | `perf: optimize measured bottlenecks` |
-| **FASE 27** | **Docker & Docker Compose Multi-Service Environment** | ⬜ Pending | `chore: containerize hookbridge` |
+| **FASE 26** | **Performance & Bottleneck Profiling** | ✅ **DONE** | `perf: optimize measured bottlenecks` |
+| **FASE 27** | **Docker & Docker Compose Multi-Service Environment** | ⏳ *Next* | `chore: containerize hookbridge` |
 | **FASE 28** | **CI/CD Pipeline (GitHub Actions, Analyzers, Security Audits)** | ⬜ Pending | `ci: add build test and security pipeline` |
 | **FASE 29** | **Final Project Documentation & Architecture Blueprint** | ⬜ Pending | `docs: finalize project documentation` |
 | **FASE 30** | **Multi-Role Engineering Review (Staff, Security, SRE, Product)** | ⬜ Pending | `refactor: finalize engineering review` |

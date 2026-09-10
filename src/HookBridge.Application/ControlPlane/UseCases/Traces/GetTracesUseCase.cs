@@ -30,6 +30,7 @@ public sealed class GetTracesUseCase
 
         var baseDeliveries = _dbContext.Deliveries
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(d => d.Attempts)
             .Where(d => d.TenantId == tenantId);
 

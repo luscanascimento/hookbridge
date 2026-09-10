@@ -49,6 +49,7 @@ public sealed class GetEndpointHealthMetricsUseCase
         // 2. Fetch Deliveries & Attempts in the 24-hour window
         var deliveries = await _dbContext.Deliveries
             .AsNoTracking()
+            .AsSplitQuery()
             .Include(d => d.Attempts)
             .Where(d => d.EndpointId == endpointId && d.TenantId == tenantId && d.CreatedAt >= windowStart)
             .OrderBy(d => d.CreatedAt)

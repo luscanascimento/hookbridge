@@ -39,8 +39,7 @@ public sealed class AnalyzePayloadUseCase
         }
 
         var raw = request.PayloadJson.Trim();
-        var rawBytes = Encoding.UTF8.GetBytes(raw);
-        var rawByteSize = rawBytes.Length;
+        var rawByteSize = Encoding.UTF8.GetByteCount(raw);
 
         // Parse JSON
         JsonDocument doc;
@@ -64,16 +63,16 @@ public sealed class AnalyzePayloadUseCase
             var formattedByteSize = Encoding.UTF8.GetByteCount(formattedJson);
 
             // GZip Compression estimation
-            var estimatedGzipByteSize = ComputeGzipByteSize(rawBytes);
+            var estimatedGzipByteSize = ComputeGzipByteSize(raw);
             var compressionRatioPercent = rawByteSize > 0
                 ? Math.Round(Math.Max(0, (1.0 - ((double)estimatedGzipByteSize / rawByteSize)) * 100.0), 2)
                 : 0.0;
 
             // Character analysis
             var nonAsciiCount = 0;
-            foreach (var b in rawBytes)
+            foreach (var c in raw)
             {
-                if (b > 127) nonAsciiCount++;
+                if (c > 127) nonAsciiCount++;
             }
             var isMultibyte = nonAsciiCount > 0;
 
@@ -108,13 +107,14 @@ public sealed class AnalyzePayloadUseCase
         }
     }
 
-    private static int ComputeGzipByteSize(byte[] data)
+    private static int ComputeGzipByteSize(string data)
     {
-        if (data.Length == 0) return 0;
+        if (string.IsNullOrEmpty(data)) return 0;
         using var ms = new MemoryStream();
         using (var gzip = new GZipStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+        using (var writer = new StreamWriter(gzip, Encoding.UTF8, bufferSize: 1024, leaveOpen: true))
         {
-            gzip.Write(data, 0, data.Length);
+            writer.Write(data);
         }
         return (int)ms.Length;
     }
