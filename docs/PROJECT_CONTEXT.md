@@ -363,9 +363,23 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
       - `InMemoryTelemetryBuffer` 200-item ring buffer eviction policy and thread-safe parallel span recording.
     - Full test suite: 394/394 unit and integration tests passing (312 unit + 82 integration); Angular production build and typecheck clean with 0 errors.
 
+26. **FASE 25 — Distributed Chaos & Failure Testing (Broker/DB Outages)** (`test: add distributed failure scenarios`)
+    - Distributed Chaos & Failure Integration Suite (`DistributedFailureIntegrationTests.cs`):
+      - Ingestion failure resilience: verified `POST /api/v1/events` handles EventFlow / broker outages with structured RFC 7807 ProblemDetails (`EventFlow.ConnectionError`) and zero database state corruption, followed by seamless recovery when the broker is restored.
+      - Replay under outage: verified single replay and bulk replay gracefully reject or report zero replayed deliveries when the broker is down, without corrupting delivery status or parent lineage chains.
+      - Dead-Letter Queue failure modes: verified `/api/v1/dlq` Peek, Replay, and Purge endpoints return 500 ProblemDetails during broker DLQ unavailability and recover cleanly upon broker reconnection.
+      - Flaky endpoint simulation with `SimulatorStrategy.SequentialRetryPattern`: verified that transient 503 errors across retries correctly increment attempt numbers and record execution timelines before transitioning status to `Success` upon eventual recovery.
+      - Circuit breaker degradation and recovery lifecycle: verified transitions from `Closed` (Healthy) to `HalfOpen` (3 consecutive failures) to `Open` (5 consecutive failures with Critical incident generation) and subsequent recovery back to `Closed` upon consecutive successful attempts.
+      - High-concurrency chaos fault injection: verified concurrent invocations of rate limit throttling (429 with `Retry-After`), simulated network timeouts (504), and chaos jitter (502/500) execute without race conditions or deadlocks.
+    - Chaos & Broker Outage Unit Test Suite (`BrokerAndDbOutageChaosTests.cs`):
+      - `EventFlowClient` network failure unit tests: verified handling of `SocketException` (connection refused), `TaskCanceledException` / timeout distinguishing caller cancellation from HttpClient timeout, and DLQ operations during broker outage.
+      - `PublishEventUseCase`, `ReplayDeliveryUseCase`, and `BulkReplayDeliveriesUseCase` transactional integrity: ensured delivery entities are only added and persisted to EF Core `DbContext` after EventFlow ingestion succeeds.
+      - `GetEndpointHealthMetricsUseCase` extreme failure diagnostics: verified health score degradation (<30), p99 latency calculations, and Critical incident generation under consecutive failure bursts.
+    - Full test suite: 407/407 unit and integration tests passing (319 unit + 88 integration); Angular production build clean with 0 errors.
+
 ### Next Session Objective
-- **FASE 25 — Distributed Chaos & Failure Testing (Broker/DB Outages)**:
-  - Add fault injection scenarios for message broker disconnects, database timeouts, and transient network partition recovery.
-  - Target commit: `test: add distributed failure scenarios`.
+- **FASE 26 — Performance & Bottleneck Profiling**:
+  - Profile database indexing, query execution plans, in-memory allocations, and JSON serialization bottlenecks under high load.
+  - Target commit: `perf: optimize measured bottlenecks`.
 
 

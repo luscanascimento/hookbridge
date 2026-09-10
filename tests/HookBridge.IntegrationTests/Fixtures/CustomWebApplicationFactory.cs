@@ -62,7 +62,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             {
                 services.Remove(eventFlowDescriptor);
             }
-            services.AddScoped<IEventFlowClient, FakeEventFlowClient>();
+            services.AddSingleton<FakeEventFlowClient>();
+            services.AddSingleton<IEventFlowClient>(sp => sp.GetRequiredService<FakeEventFlowClient>());
         });
 
         builder.UseEnvironment("Testing");

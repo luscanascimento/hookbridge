@@ -78,7 +78,11 @@ public sealed partial class EventFlowClient : IEventFlowClient
                 "EventFlow.IngestFailed",
                 $"EventFlow ingestion rejected with status code {(int)response.StatusCode}: {errorBody}"));
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
         {
             LogEventIngestException(_logger, ex);
             return Result.Failure<EventFlowIngestResponse>(DomainError.Failure(
@@ -106,7 +110,11 @@ public sealed partial class EventFlowClient : IEventFlowClient
                 "EventFlow.DlqPeekFailed",
                 $"Failed to peek DLQ: {error}"));
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
         {
             return Result.Failure<IReadOnlyList<DeadLetterMessageDto>>(DomainError.Failure(
                 "EventFlow.ConnectionError",
@@ -133,7 +141,11 @@ public sealed partial class EventFlowClient : IEventFlowClient
                 "EventFlow.DlqReplayFailed",
                 $"Failed to replay DLQ: {error}"));
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
         {
             return Result.Failure<int>(DomainError.Failure(
                 "EventFlow.ConnectionError",
@@ -160,7 +172,11 @@ public sealed partial class EventFlowClient : IEventFlowClient
                 "EventFlow.DlqPurgeFailed",
                 $"Failed to purge DLQ: {error}"));
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
         {
             return Result.Failure<int>(DomainError.Failure(
                 "EventFlow.ConnectionError",

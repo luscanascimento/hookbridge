@@ -173,8 +173,8 @@ public sealed class AdversarialBoundaryIntegrationTests : IClassFixture<CustomWe
         var res503 = await _client.PostAsync("/api/v1/simulator/http/503", null);
         res503.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
 
-        // Chaos endpoint should return one of standard fault codes
-        var resChaos = await _client.PostAsync("/api/v1/simulator/chaos", null);
+        // Chaos endpoint should return one of standard fault codes with 100% failure rate specified
+        var resChaos = await _client.PostAsync("/api/v1/simulator/chaos?failureRate=100&failStatus=503", null);
         var expectedCodes = new[] { HttpStatusCode.TooManyRequests, HttpStatusCode.InternalServerError, HttpStatusCode.BadGateway, HttpStatusCode.ServiceUnavailable, HttpStatusCode.GatewayTimeout };
         expectedCodes.Should().Contain(resChaos.StatusCode);
     }

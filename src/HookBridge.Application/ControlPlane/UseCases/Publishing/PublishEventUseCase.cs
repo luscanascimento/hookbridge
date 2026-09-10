@@ -96,7 +96,6 @@ public sealed class PublishEventUseCase
                 if (deliveryResult.IsSuccess)
                 {
                     deliveriesCreated.Add(deliveryResult.Value);
-                    _dbContext.Deliveries.Add(deliveryResult.Value);
                 }
             }
         }
@@ -119,6 +118,12 @@ public sealed class PublishEventUseCase
         if (ingestResult.IsFailure)
         {
             return Result.Failure<PublishEventResponse>(ingestResult.Error);
+        }
+
+        // Persist deliveries after successful EventFlow ingestion
+        foreach (var delivery in deliveriesCreated)
+        {
+            _dbContext.Deliveries.Add(delivery);
         }
 
         // 3. Audit trail

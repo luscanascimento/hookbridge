@@ -189,8 +189,6 @@ public sealed class BulkReplayDeliveriesUseCase
             }
 
             var newDelivery = newDeliveryResult.Value;
-            _dbContext.Deliveries.Add(newDelivery);
-            newDeliveries.Add(newDelivery);
 
             var metadata = new Dictionary<string, string>
             {
@@ -219,6 +217,9 @@ public sealed class BulkReplayDeliveriesUseCase
             {
                 continue;
             }
+
+            _dbContext.Deliveries.Add(newDelivery);
+            newDeliveries.Add(newDelivery);
 
             replayedResponses.Add(new ReplayDeliveryResponse(
                 newDelivery.Id,

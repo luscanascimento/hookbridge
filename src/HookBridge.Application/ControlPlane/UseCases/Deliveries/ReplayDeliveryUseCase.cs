@@ -144,7 +144,6 @@ public sealed class ReplayDeliveryUseCase
         }
 
         var newDelivery = newDeliveryResult.Value;
-        _dbContext.Deliveries.Add(newDelivery);
 
         // Ingest into EventFlow Data Plane
         var metadata = new Dictionary<string, string>
@@ -173,6 +172,8 @@ public sealed class ReplayDeliveryUseCase
         {
             return Result.Failure<ReplayDeliveryResponse>(ingestResult.Error);
         }
+
+        _dbContext.Deliveries.Add(newDelivery);
 
         // Audit entry
         var audit = AuditEntry.Create(
