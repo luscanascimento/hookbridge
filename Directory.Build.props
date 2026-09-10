@@ -8,5 +8,16 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <NoWarn>$(NoWarn);NETSDK1188</NoWarn>
+
+    <!-- Release Candidate Metadata -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0-rc.1</InformationalVersion>
+    <Company>HookBridge Open Source</Company>
+    <Product>HookBridge Webhook Gateway &amp; Observability Platform</Product>
+    <Authors>Lucas Nascimento, HookBridge Contributors</Authors>
+    <RepositoryUrl>https://github.com/luscanascimento/hookbridge</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 </Project>
