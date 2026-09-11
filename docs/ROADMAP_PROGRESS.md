@@ -35,6 +35,7 @@
 | **FASE 21** | **Delivery Failure Simulator (200, 429, 500, Timeout, Chaos)** | ✅ **DONE** | `feat: add delivery failure simulator` (`67e95d8`) |
 | **FASE 22** | **OpenTelemetry Observability (Traces, Metrics, Logs, Jaeger)** | ✅ **DONE** | `feat: add observability` (`78e3b57`) |
 | **FASE 23** | **Adversarial Security Hardening (IDOR, SSRF, XSS, Replay)** | ✅ **DONE** | `fix: harden application security` |
+| **FASE 24** | **Comprehensive Automated Test Suite (Unit, Integration, E2E)** | ✅ **DONE** | `test: expand automated test coverage` (`6abd221`) |
 | **FASE 25** | **Distributed Chaos & Failure Testing (Broker/DB Outages)** | ✅ **DONE** | `test: add distributed failure scenarios` |
 | **FASE 26** | **Performance & Bottleneck Profiling** | ✅ **DONE** | `perf: optimize measured bottlenecks` |
 | **FASE 27** | **Docker & Docker Compose Multi-Service Environment** | ✅ **DONE** | `chore: containerize hookbridge` |
