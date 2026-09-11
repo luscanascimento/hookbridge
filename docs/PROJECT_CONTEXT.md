@@ -3,7 +3,7 @@
 > **Role & Persona:** Staff Software Engineer — Production Release Candidate Hardening  
 > **Repository:** `git@github.com:luscanascimento/hookbridge.git`  
 > **Real Stack:** Backend .NET 9 (`net9.0`, C# 13, EF Core / PostgreSQL), Frontend Angular 21 (Strict TS, Zoneless, PNPM), SignalR, EventFlow Data Plane  
-> **Current Hardening Progress:** FASE 1 (Diagnóstico) e FASE 2 (Configuração e Secrets) Concluídas — FASE 3 (Banco de dados e persistência) Próxima  
+> **Current Hardening Progress:** FASE 1 (Diagnóstico), FASE 2 (Configuração e Secrets) e FASE 3 (Banco de dados e persistência) Concluídas — FASE 4 (Multi-tenancy e autorização) Próxima  
 > **Hardening Governance Rules:**
 > 1. Preservar arquitetura Domain → Application → Infrastructure → API sem abstrações artificiais.
 > 2. YAGNI, SOLID, DRY e KISS pragmáticos.
@@ -423,8 +423,44 @@ HookBridge is designed not merely as a dashboard, but as a production-ready deve
     - Release Candidate verification test suite (`ReleaseCandidateVerificationTests.cs`).
     - Complete test suite: 429/429 automated tests passing (341 unit + 88 integration).
 
-### Final Status
-- **All 32 Phases (0 through 31) 100% Completed, Tested, and Verified.**
-- **Production Release Candidate: HookBridge v1.0.0-rc.1.**
+### Final Status (Initial Roadmap)
+- **All 32 Initial Phases (0 through 31) Completed and Verified.**
+
+---
+
+## 6. Production Release Candidate Hardening (Current Campaign)
+
+### RC Hardening Overview & Governance
+A rigorous 12-phase hardening campaign preparing the repository for a resilient, production-ready Release Candidate:
+
+| Phase | Description | Status | Commit |
+| :--- | :--- | :--- | :--- |
+| **FASE 1** | Diagnóstico e baseline (stack alignment, vulnerability audit) | ✅ Concluída | Baseline Audit |
+| **FASE 2** | Configuração e secrets (fail-fast options, sanitized configs, no plaintext defaults) | ✅ Concluída & Pushed | `1922bc9` |
+| **FASE 3** | Banco de dados e persistência (versioned EF migrations, indexes, idempotent DDL) | ✅ Concluída (Aguardando push) | Pending user confirmation |
+| **FASE 4** | Multi-tenancy e autorização (fail-closed query filter, zero header trust, IDOR defense) | ⏳ Próxima | - |
+| **FASE 5** | Tratamento de erros e validação (RFC 7807, zero stack trace leak, FluentValidation) | ⏳ Planejada | - |
+| **FASE 6** | Logging, auditoria e observabilidade (structured logging, PII sanitization, OTel) | ⏳ Planejada | - |
+| **FASE 7** | Resiliência e chamadas externas (Polly v8, timeout, circuit breaker, SSRF defense) | ⏳ Planejada | - |
+| **FASE 8** | Background processing e consistência (Transactional Outbox, DLQ replay) | ⏳ Planejada | - |
+| **FASE 9** | API e contratos externos (OpenAPI 3.1, pagination limits, idempotency keys) | ⏳ Planejada | - |
+| **FASE 10** | Frontend e developer experience (Angular 21 strict, reactive error handling, UX) | ⏳ Planejada | - |
+| **FASE 11** | Testes e validação de ponta a ponta (Cross-tenant security, race conditions, chaos) | ⏳ Planejada | - |
+| **FASE 12** | Operabilidade, CI/CD e governança de release (Docker multi-stage, CI matrix, RC check) | ⏳ Planejada | - |
+
+### Detailed Log: FASE 3 — Banco de Dados e Persistência
+1. **EF Core Migrations Criadas:**
+   - Manifest local de ferramentas configurado (`.config/dotnet-tools.json`) com `dotnet-ef 9.0.2`.
+   - Migration `20260911031854_InitialCreate` gerada cobrindo todas as 17 tabelas relacionais do sistema.
+   - Script SQL idempotente gerado para deploy em produção: `src/HookBridge.Infrastructure/Persistence/Migrations/init_schema.sql`.
+2. **Hardening de Persistência e Índices:**
+   - Adicionado índice composto único em `(DeliveryId, AttemptNumber)` em `AttemptConfiguration.cs` para evitar inserções duplicadas de tentativas de entrega.
+   - Validação de criptografia de segredos em repouso (`webhook_secrets.encrypted_secret`).
+3. **Documentação e Governança:**
+   - Criado guia de governança e ciclo de vida de migrations: `docs/architecture/database-migrations.md`.
+4. **Testes Automatizados:**
+   - Criada suíte de testes de persistência: `tests/HookBridge.UnitTests/Persistence/DatabaseMigrationAndPersistenceTests.cs`.
+   - 443 testes automatizados passando (355 UnitTests + 88 IntegrationTests).
+
 
 

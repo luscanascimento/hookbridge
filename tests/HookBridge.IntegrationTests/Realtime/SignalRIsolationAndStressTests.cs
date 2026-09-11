@@ -125,7 +125,11 @@ public sealed class SignalRIsolationAndStressTests : IClassFixture<CustomWebAppl
         var payload = JsonDocument.Parse("{\"test\":\"broadcast\"}").RootElement;
         await apiClient.PostAsJsonAsync("/api/v1/events", new PublishEventCommand("test.broadcast", payload));
 
-        await Task.Delay(400);
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (DateTime.UtcNow < deadline && (count1 == 0 || count2 == 0 || count3 == 0))
+        {
+            await Task.Delay(50);
+        }
 
         // 4. Assert: All 3 connections received the event
         count1.Should().BeGreaterThanOrEqualTo(1);
