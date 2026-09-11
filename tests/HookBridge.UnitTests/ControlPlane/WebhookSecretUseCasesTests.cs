@@ -45,7 +45,7 @@ public sealed class WebhookSecretUseCasesTests : IDisposable
         _db = new HookBridgeDbContext(options, _tenantContext);
         _dt = new DateTimeProvider();
         _keyGenerator = new KeyGenerator();
-        _secretEncryptor = new AesSecretEncryptor(Options.Create(new WebhookEncryptionOptions()));
+        _secretEncryptor = new AesSecretEncryptor(Options.Create(new WebhookEncryptionOptions { MasterKey = "7f8e9d0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6" }));
         _ssrfGuard = new SsrfGuard(Options.Create(new SsrfOptions { ResolveDns = false }), NullLogger<SsrfGuard>.Instance);
     }
 

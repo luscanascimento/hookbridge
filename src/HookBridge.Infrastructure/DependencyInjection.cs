@@ -24,11 +24,24 @@ public static class DependencyInjection
         services.AddScoped<ITenantContext, TenantContext>();
         services.AddScoped<ICurrentUser, CurrentUser>();
 
-        // 2. Cryptographic & Auth Services
-        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
-        services.Configure<WebhookEncryptionOptions>(configuration.GetSection(WebhookEncryptionOptions.SectionName));
-        services.Configure<SsrfOptions>(configuration.GetSection(SsrfOptions.SectionName));
-        services.Configure<HookBridge.Infrastructure.Integration.EventFlowOptions>(configuration.GetSection(HookBridge.Infrastructure.Integration.EventFlowOptions.SectionName));
+        // 2. Cryptographic & Auth Services with Startup Validation
+        services.AddOptions<JwtOptions>()
+            .BindConfiguration(JwtOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<WebhookEncryptionOptions>()
+            .BindConfiguration(WebhookEncryptionOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddOptions<SsrfOptions>()
+            .BindConfiguration(SsrfOptions.SectionName);
+
+        services.AddOptions<HookBridge.Infrastructure.Integration.EventFlowOptions>()
+            .BindConfiguration(HookBridge.Infrastructure.Integration.EventFlowOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenService, TokenService>();
@@ -40,7 +53,7 @@ public static class DependencyInjection
         // 3. EventFlow Integration HTTP Client
         services.AddHttpClient<IEventFlowClient, HookBridge.Infrastructure.Integration.EventFlowClient>();
 
-        // 3. JWT Authentication dynamically configured from IOptions<JwtOptions>
+        // 4. JWT Authentication dynamically configured from IOptions<JwtOptions>
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -52,7 +65,8 @@ public static class DependencyInjection
             .Configure<IOptions<JwtOptions>>((options, jwtOpts) =>
             {
                 var jwt = jwtOpts.Value;
-                var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SecretKey));
+                var secretKey = !string.IsNullOrWhiteSpace(jwt.SecretKey) ? jwt.SecretKey : "Fallback_Temp_Key_For_Options_Configuration_32_Bytes!";
+                var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 
                 options.RequireHttpsMetadata = false;
                 options.SaveToken = true;
@@ -85,7 +99,7 @@ public static class DependencyInjection
                 };
             });
 
-        // 4. Role-Based Authorization Policies
+        // 5. Role-Based Authorization Policies
         services.AddAuthorizationBuilder()
             .AddPolicy(AuthorizationPolicies.RequireTenantAdmin, policy =>
                 policy.RequireRole(UserRole.TenantAdmin.ToString(), UserRole.SystemOperator.ToString()))
@@ -96,9 +110,22 @@ public static class DependencyInjection
             .AddPolicy(AuthorizationPolicies.RequireSystemOperator, policy =>
                 policy.RequireRole(UserRole.SystemOperator.ToString()));
 
-        // 5. PostgreSQL Persistence
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=localhost;Port=5432;Database=hookbridge_db;Username=postgres;Password=postgres";
+        // 6. PostgreSQL Persistence with Strict Production Validation
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var envName = configuration["ASPNETCORE_ENVIRONMENT"] 
+            ?? configuration["DOTNET_ENVIRONMENT"] 
+            ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
+            ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT");
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            if (string.Equals(envName, "Production", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Critical configuration missing: 'ConnectionStrings:DefaultConnection' must be set in Production.");
+            }
+
+            connectionString = "Host=localhost;Port=5432;Database=hookbridge_db;Username=postgres;Password=postgres";
+        }
 
         services.AddDbContext<HookBridgeDbContext>((sp, options) =>
         {
@@ -111,7 +138,7 @@ public static class DependencyInjection
 
         services.AddScoped<IHookBridgeDbContext>(sp => sp.GetRequiredService<HookBridgeDbContext>());
 
-        // 6. Observability & Telemetry
+        // 7. Observability & Telemetry
         services.AddHookBridgeTelemetry(configuration);
 
         return services;

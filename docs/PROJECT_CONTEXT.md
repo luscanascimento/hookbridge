@@ -1,9 +1,18 @@
 # HOOKBRIDGE — MASTER PROJECT CONTEXT & ENGINEERING GOVERNANCE
 
-> **Role & Persona:** Staff/Principal Software Engineer, Solution Architect & Security Engineer  
+> **Role & Persona:** Staff Software Engineer — Production Release Candidate Hardening  
 > **Repository:** `git@github.com:luscanascimento/hookbridge.git`  
-> **Status:** All 32 Phases (0-31) Completed — Production Release Candidate Verified (v1.0.0-rc.1)  
-> **Related System (Data Plane):** EventFlow (`/home/sirbu/projects/eventflow`)
+> **Real Stack:** Backend .NET 9 (`net9.0`, C# 13, EF Core / PostgreSQL), Frontend Angular 21 (Strict TS, Zoneless, PNPM), SignalR, EventFlow Data Plane  
+> **Current Hardening Progress:** FASE 1 (Diagnóstico) e FASE 2 (Configuração e Secrets) Concluídas — FASE 3 (Banco de dados e persistência) Próxima  
+> **Hardening Governance Rules:**
+> 1. Preservar arquitetura Domain → Application → Infrastructure → API sem abstrações artificiais.
+> 2. YAGNI, SOLID, DRY e KISS pragmáticos.
+> 3. Sem reescritas amplas: pequenos incrementos revisáveis com explicação de problema, risco, solução, arquivos e validação.
+> 4. Evidência obrigatória de testes/builds antes de declarar concluído.
+> 5. Nunca expor secrets/senhas em logs, traces ou respostas HTTP.
+> 6. Nunca remover testes existentes; adicionar novos testes para comportamento de segurança.
+> 7. Isolamento de tenant estritamente fail-closed.
+> 8. Cada fase é commitada e enviada via push mediante confirmação do usuário.
 
 ---
 

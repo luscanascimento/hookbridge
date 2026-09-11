@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace HookBridge.Infrastructure.Security;
 
 public sealed class WebhookEncryptionOptions
@@ -6,7 +8,9 @@ public sealed class WebhookEncryptionOptions
 
     /// <summary>
     /// 256-bit Master Key for AES-GCM encryption of webhook secrets at rest.
-    /// Default development key is provided for out-of-the-box local developer workflows.
+    /// Can be provided as a 64-character hex string or at least 32-character key.
     /// </summary>
-    public string MasterKey { get; set; } = "7f8e9d0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6";
+    [Required(ErrorMessage = "WebhookEncryption:MasterKey is required.")]
+    [MinLength(32, ErrorMessage = "WebhookEncryption:MasterKey must be at least 32 characters or a 64-character hex string.")]
+    public string MasterKey { get; set; } = string.Empty;
 }

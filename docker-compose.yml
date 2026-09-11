@@ -13,8 +13,9 @@ services:
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=hookbridge_db;Username=postgres;Password=postgres
       - OpenTelemetry__OtlpEndpoint=http://jaeger:4317
       - EventFlow__BaseUrl=http://eventflow-api:5000
-      - EventFlow__ApiKey=${EVENTFLOW_API_KEY:-ef_live_secret_key_1234567890}
-      - Jwt__SecretKey=${JWT_SECRET_KEY:-hb_super_secret_jwt_signing_key_minimum_32_characters_long_2026!}
+      - EventFlow__ApiKey=${EVENTFLOW_API_KEY:-ef_dev_secret_key_1234567890}
+      - WebhookEncryption__MasterKey=${WEBHOOK_ENCRYPTION_MASTER_KEY:-7f8e9d0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6}
+      - Jwt__SecretKey=${JWT_SECRET_KEY:-hb_dev_jwt_signing_key_minimum_32_characters_long_2026!}
       - Jwt__Issuer=HookBridge
       - Jwt__Audience=HookBridgeClients
       - Jwt__ExpirationMinutes=60

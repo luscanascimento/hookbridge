@@ -20,10 +20,17 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         {
             var testConfig = new Dictionary<string, string?>
             {
+                ["ASPNETCORE_ENVIRONMENT"] = "Testing",
+                ["ConnectionStrings:DefaultConnection"] = "DataSource=:memory:",
                 ["Jwt:SecretKey"] = "Super_Secret_Test_Jwt_Key_Must_Be_At_Least_256_Bits_Long_2026!",
                 ["Jwt:Issuer"] = "HookBridge.ControlPlane",
                 ["Jwt:Audience"] = "HookBridge.DeveloperPortal",
-                ["Jwt:AccessTokenExpirationMinutes"] = "15"
+                ["Jwt:AccessTokenExpirationMinutes"] = "15",
+                ["Jwt:RefreshTokenExpirationDays"] = "7",
+                ["WebhookEncryption:MasterKey"] = "7f8e9d0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6",
+                ["EventFlow:BaseUrl"] = "http://localhost:5000",
+                ["EventFlow:ApiKey"] = "test_eventflow_api_key_2026",
+                ["EventFlow:TimeoutSeconds"] = "10"
             };
 
             configBuilder.AddInMemoryCollection(testConfig);

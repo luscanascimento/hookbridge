@@ -55,7 +55,7 @@ public sealed class SubscriptionUseCasesTests : IDisposable
         var app = await appUseCase.ExecuteAsync(new CreateApplicationCommand("Test App", null));
 
         var keyGen = new KeyGenerator();
-        var encryptor = new AesSecretEncryptor(Options.Create(new WebhookEncryptionOptions()));
+        var encryptor = new AesSecretEncryptor(Options.Create(new WebhookEncryptionOptions { MasterKey = "7f8e9d0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6" }));
         var ssrf = new SsrfGuard(Options.Create(new SsrfOptions { ResolveDns = false }), NullLogger<SsrfGuard>.Instance);
 
         var endpointUseCase = new CreateEndpointUseCase(_db, _tenantContext, _currentUser, new CreateEndpointValidator(), ssrf, keyGen, encryptor, _dt);
@@ -80,7 +80,7 @@ public sealed class SubscriptionUseCasesTests : IDisposable
         var app = await appUseCase.ExecuteAsync(new CreateApplicationCommand("Test App", null));
 
         var keyGen = new KeyGenerator();
-        var encryptor = new AesSecretEncryptor(Options.Create(new WebhookEncryptionOptions()));
+        var encryptor = new AesSecretEncryptor(Options.Create(new WebhookEncryptionOptions { MasterKey = "7f8e9d0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6" }));
         var ssrf = new SsrfGuard(Options.Create(new SsrfOptions { ResolveDns = false }), NullLogger<SsrfGuard>.Instance);
 
         var endpointUseCase = new CreateEndpointUseCase(_db, _tenantContext, _currentUser, new CreateEndpointValidator(), ssrf, keyGen, encryptor, _dt);
