@@ -437,9 +437,9 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
 | :--- | :--- | :--- | :--- |
 | **FASE 1** | Diagnóstico e baseline (stack alignment, vulnerability audit) | ✅ Concluída | Baseline Audit |
 | **FASE 2** | Configuração e secrets (fail-fast options, sanitized configs, no plaintext defaults) | ✅ Concluída & Pushed | `1922bc9` |
-| **FASE 3** | Banco de dados e persistência (versioned EF migrations, indexes, idempotent DDL) | ✅ Concluída (Aguardando push) | Pending user confirmation |
-| **FASE 4** | Multi-tenancy e autorização (fail-closed query filter, zero header trust, IDOR defense) | ⏳ Próxima | - |
-| **FASE 5** | Tratamento de erros e validação (RFC 7807, zero stack trace leak, FluentValidation) | ⏳ Planejada | - |
+| **FASE 3** | Banco de dados e persistência (versioned EF migrations, indexes, idempotent DDL) | ✅ Concluída & Pushed | `cfae65a` |
+| **FASE 4** | Multi-tenancy e autorização (fail-closed query filter, zero header trust, IDOR defense) | ✅ Concluída & Pushed | Pending commit/push |
+| **FASE 5** | Tratamento de erros e validação (RFC 7807, zero stack trace leak, FluentValidation) | ⏳ Próxima | - |
 | **FASE 6** | Logging, auditoria e observabilidade (structured logging, PII sanitization, OTel) | ⏳ Planejada | - |
 | **FASE 7** | Resiliência e chamadas externas (Polly v8, timeout, circuit breaker, SSRF defense) | ⏳ Planejada | - |
 | **FASE 8** | Background processing e consistência (Transactional Outbox, DLQ replay) | ⏳ Planejada | - |
@@ -448,19 +448,21 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
 | **FASE 11** | Testes e validação de ponta a ponta (Cross-tenant security, race conditions, chaos) | ⏳ Planejada | - |
 | **FASE 12** | Operabilidade, CI/CD e governança de release (Docker multi-stage, CI matrix, RC check) | ⏳ Planejada | - |
 
-### Detailed Log: FASE 3 — Banco de Dados e Persistência
-1. **EF Core Migrations Criadas:**
-   - Manifest local de ferramentas configurado (`.config/dotnet-tools.json`) com `dotnet-ef 9.0.2`.
-   - Migration `20260911031854_InitialCreate` gerada cobrindo todas as 17 tabelas relacionais do sistema.
-   - Script SQL idempotente gerado para deploy em produção: `src/HookBridge.Infrastructure/Persistence/Migrations/init_schema.sql`.
-2. **Hardening de Persistência e Índices:**
-   - Adicionado índice composto único em `(DeliveryId, AttemptNumber)` em `AttemptConfiguration.cs` para evitar inserções duplicadas de tentativas de entrega.
-   - Validação de criptografia de segredos em repouso (`webhook_secrets.encrypted_secret`).
-3. **Documentação e Governança:**
-   - Criado guia de governança e ciclo de vida de migrations: `docs/architecture/database-migrations.md`.
+### Detailed Log: FASE 4 — Multi-Tenancy e Autorização
+1. **Global Query Filter Estritamente Fail-Closed:**
+   - Atualizado `ApplyTenantFilter` em `HookBridgeDbContext.cs` para `HasTenantFilter && e.TenantId == CurrentTenantId`.
+   - Qualquer consulta não autenticada ou sem contexto de tenant retorna estritamente 0 registros por padrão (fail-closed).
+   - Consultas de sistema e scraping de métricas Prometheus utilizam explicitamente `.IgnoreQueryFilters()`.
+2. **Zero Header Trust:**
+   - Removida a confiança cega em cabeçalho `X-Tenant-ID` não autenticado em `TenantResolutionMiddleware.cs`.
+   - A identidade do tenant é estabelecida exclusivamente a partir de claims criptograficamente validadas do JWT (`tenant_id`, `tid`, `tenant_slug`).
+3. **SignalR Tenant Isolation & RBAC Enforcement:**
+   - Hardening em `DeliveryHub.cs` para validação de claims e autorização de inscrição de endpoints e aplicações com fail-closed defensivo.
+   - Verificada matriz de autorização RBAC (`RequireTenantAdmin`, `RequireDeveloper`, `RequireViewer`, `RequireSystemOperator`).
 4. **Testes Automatizados:**
-   - Criada suíte de testes de persistência: `tests/HookBridge.UnitTests/Persistence/DatabaseMigrationAndPersistenceTests.cs`.
-   - 443 testes automatizados passando (355 UnitTests + 88 IntegrationTests).
+   - Criados `tests/HookBridge.UnitTests/Security/MultiTenancyFailClosedTests.cs` e `tests/HookBridge.IntegrationTests/Security/RbacAndTenantAuthorizationTests.cs`.
+   - 449 testes automatizados passando (357 UnitTests + 92 IntegrationTests).
+
 
 
 

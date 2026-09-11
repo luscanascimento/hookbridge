@@ -33,8 +33,12 @@ public class GlobalQueryFilterTests
         db.Users.AddRange(userA, userB);
         await db.SaveChangesAsync();
 
-        // 1. Without tenant set -> sees all
-        var allUsers = await db.Users.ToListAsync();
+        // 1. Fail-closed: Without tenant set -> sees 0 (strictly isolated)
+        var unauthenticatedUsers = await db.Users.ToListAsync();
+        unauthenticatedUsers.Should().BeEmpty();
+
+        // Administrative / system query explicitly bypassing filters -> sees all
+        var allUsers = await db.Users.IgnoreQueryFilters().ToListAsync();
         allUsers.Should().HaveCount(2);
 
         // 2. Set Tenant A

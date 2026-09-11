@@ -58,20 +58,8 @@ public sealed class TenantResolutionMiddleware
                 tenantContext.SetTenant(parsedTenantId, tenantSlugClaim);
             }
         }
-        // 2. Check for explicit Tenant Header (e.g., in machine-to-machine / API key context)
-        else if (context.Request.Headers.TryGetValue(TenantHeaderName, out var tenantHeaderValues) &&
-            !string.IsNullOrWhiteSpace(tenantHeaderValues.FirstOrDefault()))
-        {
-            var headerValue = tenantHeaderValues.First()!;
-            if (Guid.TryParse(headerValue, out var parsedTenantGuid))
-            {
-                tenantContext.SetTenant(parsedTenantGuid, null);
-            }
-            else
-            {
-                tenantContext.SetTenant(Guid.Empty, headerValue.Trim());
-            }
-        }
+        // 2. Zero Header Trust: Unauthenticated requests cannot set or spoof tenant context via client-sent headers.
+        // Tenant context is strictly bound to cryptographically verified claims from authenticated identities.
 
         await _next(context);
     }

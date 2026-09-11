@@ -101,6 +101,7 @@ public partial class DeliveryHub : Hub<IDeliveryHubClient>
         }
 
         var endpointExists = await _dbContext.Endpoints
+            .IgnoreQueryFilters()
             .AnyAsync(e => e.Id == endpointId && e.TenantId == tenantId.Value);
 
         if (!endpointExists)
@@ -144,6 +145,7 @@ public partial class DeliveryHub : Hub<IDeliveryHubClient>
         }
 
         var appExists = await _dbContext.Applications
+            .IgnoreQueryFilters()
             .AnyAsync(a => a.Id == applicationId && a.TenantId == tenantId.Value);
 
         if (!appExists)
@@ -183,6 +185,7 @@ public partial class DeliveryHub : Hub<IDeliveryHubClient>
         }
 
         var claim = Context.User?.FindFirst("tenant_id")
+            ?? Context.User?.FindFirst("tid")
             ?? Context.User?.FindFirst("TenantId");
 
         if (claim != null && Guid.TryParse(claim.Value, out var tenantId))

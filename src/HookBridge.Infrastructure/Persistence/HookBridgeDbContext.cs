@@ -83,7 +83,7 @@ public sealed class HookBridgeDbContext : DbContext, IHookBridgeDbContext
         where TEntity : class, ITenantScoped
     {
         modelBuilder.Entity<TEntity>().HasQueryFilter(e =>
-            !HasTenantFilter || e.TenantId == CurrentTenantId);
+            HasTenantFilter && e.TenantId == CurrentTenantId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
