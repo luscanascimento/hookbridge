@@ -30,6 +30,7 @@ public sealed partial class GlobalExceptionHandler : IExceptionHandler
         var problemDetails = new ProblemDetails
         {
             Status = StatusCodes.Status500InternalServerError,
+            Type = "https://tools.ietf.org/html/rfc7807#section-3.1",
             Title = "An internal server error occurred",
             Detail = _env.IsProduction()
                 ? "An unexpected error occurred while processing your request. Please contact support with the trace identifier."
@@ -37,6 +38,7 @@ public sealed partial class GlobalExceptionHandler : IExceptionHandler
             Instance = httpContext.Request.Path,
             Extensions =
             {
+                ["errorCode"] = "System.UnhandledException",
                 ["traceId"] = traceId,
                 ["timestamp"] = DateTimeOffset.UtcNow
             }

@@ -1,8 +1,10 @@
 using FluentValidation;
 using HookBridge.Application.Abstractions;
 using HookBridge.Application.Auth.DTOs;
+using HookBridge.Application.Common;
 using HookBridge.Domain.Common;
 using HookBridge.Domain.Entities;
+using HookBridge.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace HookBridge.Application.Auth.UseCases;
@@ -42,9 +44,7 @@ public sealed class InviteUserUseCase
         var validation = await _validator.ValidateAsync(command, cancellationToken);
         if (!validation.IsValid)
         {
-            return Result.Failure<UserProfileResponse>(DomainError.Validation(
-                validation.Errors[0].PropertyName,
-                validation.Errors[0].ErrorMessage));
+            return Result.Failure<UserProfileResponse>(validation.ToDomainError());
         }
 
         var tenantId = _tenantContext.TenantId.Value;

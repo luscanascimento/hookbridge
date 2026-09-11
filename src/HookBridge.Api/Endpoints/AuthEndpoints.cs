@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using HookBridge.Api.Common;
 using HookBridge.Application.Auth.DTOs;
 using HookBridge.Application.Auth.UseCases;
 using HookBridge.Domain.Common;
@@ -20,7 +20,7 @@ public static class AuthEndpoints
             CancellationToken cancellationToken) =>
         {
             var result = await useCase.ExecuteAsync(command, cancellationToken);
-            return ToHttpResult(result, StatusCodes.Status201Created);
+            return HttpResults.Match(result, StatusCodes.Status201Created);
         })
         .WithName("RegisterTenant")
         .WithSummary("Registers a new tenant organization and provisions the initial TenantAdmin user.")
@@ -35,7 +35,7 @@ public static class AuthEndpoints
             CancellationToken cancellationToken) =>
         {
             var result = await useCase.ExecuteAsync(command, cancellationToken);
-            return ToHttpResult(result, StatusCodes.Status200OK);
+            return HttpResults.Match(result, StatusCodes.Status200OK);
         })
         .WithName("Login")
         .WithSummary("Authenticates user credentials and returns JWT access and refresh tokens.")
@@ -50,7 +50,7 @@ public static class AuthEndpoints
             CancellationToken cancellationToken) =>
         {
             var result = await useCase.ExecuteAsync(command, cancellationToken);
-            return ToHttpResult(result, StatusCodes.Status200OK);
+            return HttpResults.Match(result, StatusCodes.Status200OK);
         })
         .WithName("RefreshToken")
         .WithSummary("Rotates the active refresh token and returns a fresh JWT access and refresh token pair.")
@@ -63,7 +63,7 @@ public static class AuthEndpoints
             CancellationToken cancellationToken) =>
         {
             var result = await useCase.ExecuteAsync(cancellationToken);
-            return ToHttpResult(result, StatusCodes.Status200OK);
+            return HttpResults.Match(result, StatusCodes.Status200OK);
         })
         .WithName("GetCurrentUser")
         .WithSummary("Retrieves identity, role, and tenant metadata for the currently authenticated user.")
@@ -78,7 +78,7 @@ public static class AuthEndpoints
             CancellationToken cancellationToken) =>
         {
             var result = await useCase.ExecuteAsync(command, cancellationToken);
-            return ToHttpResult(result, StatusCodes.Status201Created);
+            return HttpResults.Match(result, StatusCodes.Status201Created);
         })
         .WithName("InviteUser")
         .WithSummary("Provisions a new user within the current tenant boundary with the specified role.")
@@ -89,54 +89,5 @@ public static class AuthEndpoints
         .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
 
         return app;
-    }
-
-    private static IResult ToHttpResult<TValue>(Result<TValue> result, int successStatusCode)
-    {
-        if (result.IsSuccess)
-        {
-            return successStatusCode == StatusCodes.Status201Created
-                ? Results.Created(string.Empty, result.Value)
-                : Results.Ok(result.Value);
-        }
-
-        return result.Error.Type switch
-        {
-            ErrorType.Validation => Results.Problem(
-                statusCode: StatusCodes.Status400BadRequest,
-                title: "Validation Failure",
-                detail: result.Error.Message,
-                extensions: new Dictionary<string, object?> { ["errorCode"] = result.Error.Code }),
-
-            ErrorType.Unauthorized => Results.Problem(
-                statusCode: StatusCodes.Status401Unauthorized,
-                title: "Unauthorized",
-                detail: result.Error.Message,
-                extensions: new Dictionary<string, object?> { ["errorCode"] = result.Error.Code }),
-
-            ErrorType.Forbidden => Results.Problem(
-                statusCode: StatusCodes.Status403Forbidden,
-                title: "Forbidden",
-                detail: result.Error.Message,
-                extensions: new Dictionary<string, object?> { ["errorCode"] = result.Error.Code }),
-
-            ErrorType.NotFound => Results.Problem(
-                statusCode: StatusCodes.Status404NotFound,
-                title: "Not Found",
-                detail: result.Error.Message,
-                extensions: new Dictionary<string, object?> { ["errorCode"] = result.Error.Code }),
-
-            ErrorType.Conflict => Results.Problem(
-                statusCode: StatusCodes.Status409Conflict,
-                title: "Conflict",
-                detail: result.Error.Message,
-                extensions: new Dictionary<string, object?> { ["errorCode"] = result.Error.Code }),
-
-            _ => Results.Problem(
-                statusCode: StatusCodes.Status500InternalServerError,
-                title: "Internal Failure",
-                detail: result.Error.Message,
-                extensions: new Dictionary<string, object?> { ["errorCode"] = result.Error.Code })
-        };
     }
 }

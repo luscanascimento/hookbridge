@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentValidation;
 using HookBridge.Application.Abstractions;
+using HookBridge.Application.Common;
 using HookBridge.Application.ControlPlane.DTOs;
 using HookBridge.Domain.Common;
 using HookBridge.Domain.Entities;
@@ -42,7 +43,7 @@ public sealed class CreateSubscriptionUseCase
         var validation = await _validator.ValidateAsync(command, cancellationToken);
         if (!validation.IsValid)
         {
-            return Result.Failure<SubscriptionResponse>(DomainError.Validation(validation.Errors[0].PropertyName, validation.Errors[0].ErrorMessage));
+            return Result.Failure<SubscriptionResponse>(validation.ToDomainError());
         }
 
         var endpointExists = await _dbContext.Endpoints

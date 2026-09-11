@@ -55,7 +55,7 @@ public sealed class BulkReplayDeliveriesUseCase
         var validation = await _validator.ValidateAsync(command, cancellationToken);
         if (!validation.IsValid)
         {
-            return Result.Failure<BulkReplayDeliveriesResponse>(DomainError.Validation(validation.Errors[0].PropertyName, validation.Errors[0].ErrorMessage));
+            return Result.Failure<BulkReplayDeliveriesResponse>(validation.ToDomainError());
         }
 
         using var activity = HookBridgeDiagnostics.ActivitySource.StartActivity("HookBridge.BulkReplayDeliveries");

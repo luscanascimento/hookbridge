@@ -51,16 +51,22 @@ public static class DocEndpoints
             var hostUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}";
             var effectiveBaseUrl = string.IsNullOrWhiteSpace(baseUrl) ? hostUrl : baseUrl;
             var reference = useCase.Execute(effectiveBaseUrl, apiKey);
-            
             var recipe = reference.SdkRecipes.FirstOrDefault(r => 
                 string.Equals(r.Language, language, StringComparison.OrdinalIgnoreCase));
 
-            return recipe is not null ? Results.Ok(recipe) : Results.NotFound(new { error = $"SDK recipe for '{language}' was not found." });
+            return recipe is not null 
+                ? Results.Ok(recipe) 
+                : Results.Problem(
+                    statusCode: StatusCodes.Status404NotFound,
+                    title: "Not Found",
+                    detail: $"SDK recipe for '{language}' was not found.",
+                    type: "https://tools.ietf.org/html/rfc7807#section-3.1",
+                    extensions: new Dictionary<string, object?> { ["errorCode"] = "Doc.RecipeNotFound" });
         })
         .WithName("GetSdkRecipe")
         .WithSummary("Retrieves complete webhook integration recipe and verification code for a specific programming language.")
         .Produces<SdkRecipeDto>(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status404NotFound);
+        .Produces<ProblemDetails>(StatusCodes.Status404NotFound);
 
         return app;
     }

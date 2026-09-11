@@ -1,6 +1,7 @@
 using FluentValidation;
 using HookBridge.Application.Abstractions;
 using HookBridge.Application.Auth.DTOs;
+using HookBridge.Application.Common;
 using HookBridge.Domain.Common;
 using HookBridge.Domain.Entities;
 using HookBridge.Domain.Enums;
@@ -35,9 +36,7 @@ public sealed class RegisterTenantUseCase
         var validation = await _validator.ValidateAsync(command, cancellationToken);
         if (!validation.IsValid)
         {
-            return Result.Failure<AuthResponse>(DomainError.Validation(
-                validation.Errors[0].PropertyName,
-                validation.Errors[0].ErrorMessage));
+            return Result.Failure<AuthResponse>(validation.ToDomainError());
         }
 
         var normalizedSlug = command.TenantIdentifier.Trim().ToLowerInvariant();

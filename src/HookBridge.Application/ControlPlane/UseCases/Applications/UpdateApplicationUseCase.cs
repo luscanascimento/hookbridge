@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentValidation;
 using HookBridge.Application.Abstractions;
+using HookBridge.Application.Common;
 using HookBridge.Application.ControlPlane.DTOs;
 using HookBridge.Domain.Common;
 using HookBridge.Domain.Entities;
@@ -42,7 +43,7 @@ public sealed class UpdateApplicationUseCase
         var validation = await _validator.ValidateAsync(command, cancellationToken);
         if (!validation.IsValid)
         {
-            return Result.Failure<ApplicationResponse>(DomainError.Validation(validation.Errors[0].PropertyName, validation.Errors[0].ErrorMessage));
+            return Result.Failure<ApplicationResponse>(validation.ToDomainError());
         }
 
         var app = await _dbContext.Applications

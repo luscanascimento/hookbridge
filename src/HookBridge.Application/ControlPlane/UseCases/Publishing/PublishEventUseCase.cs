@@ -52,7 +52,7 @@ public sealed class PublishEventUseCase
         var validation = await _validator.ValidateAsync(command, cancellationToken);
         if (!validation.IsValid)
         {
-            return Result.Failure<PublishEventResponse>(DomainError.Validation(validation.Errors[0].PropertyName, validation.Errors[0].ErrorMessage));
+            return Result.Failure<PublishEventResponse>(validation.ToDomainError());
         }
 
         using var activity = HookBridgeDiagnostics.ActivitySource.StartActivity("HookBridge.PublishEvent");

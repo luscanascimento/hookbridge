@@ -438,9 +438,9 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
 | **FASE 1** | Diagnóstico e baseline (stack alignment, vulnerability audit) | ✅ Concluída | Baseline Audit |
 | **FASE 2** | Configuração e secrets (fail-fast options, sanitized configs, no plaintext defaults) | ✅ Concluída & Pushed | `1922bc9` |
 | **FASE 3** | Banco de dados e persistência (versioned EF migrations, indexes, idempotent DDL) | ✅ Concluída & Pushed | `cfae65a` |
-| **FASE 4** | Multi-tenancy e autorização (fail-closed query filter, zero header trust, IDOR defense) | ✅ Concluída & Pushed | Pending commit/push |
-| **FASE 5** | Tratamento de erros e validação (RFC 7807, zero stack trace leak, FluentValidation) | ⏳ Próxima | - |
-| **FASE 6** | Logging, auditoria e observabilidade (structured logging, PII sanitization, OTel) | ⏳ Planejada | - |
+| **FASE 4** | Multi-tenancy e autorização (fail-closed query filter, zero header trust, IDOR defense) | ✅ Concluída & Pushed | `7deb6ad` |
+| **FASE 5** | Tratamento de erros e validação (RFC 7807, zero stack trace leak, FluentValidation) | ✅ Concluída & Pushed | Pending commit/push |
+| **FASE 6** | Logging, auditoria e observabilidade (structured logging, PII sanitization, OTel) | ⏳ Próxima | - |
 | **FASE 7** | Resiliência e chamadas externas (Polly v8, timeout, circuit breaker, SSRF defense) | ⏳ Planejada | - |
 | **FASE 8** | Background processing e consistência (Transactional Outbox, DLQ replay) | ⏳ Planejada | - |
 | **FASE 9** | API e contratos externos (OpenAPI 3.1, pagination limits, idempotency keys) | ⏳ Planejada | - |
@@ -462,6 +462,20 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
 4. **Testes Automatizados:**
    - Criados `tests/HookBridge.UnitTests/Security/MultiTenancyFailClosedTests.cs` e `tests/HookBridge.IntegrationTests/Security/RbacAndTenantAuthorizationTests.cs`.
    - 449 testes automatizados passando (357 UnitTests + 92 IntegrationTests).
+
+### Detailed Log: FASE 5 — Tratamento de Erros e Validação
+1. **Padronização RFC 7807 ProblemDetails:**
+   - Atualizado `HttpResults.cs` para emitir cabeçalho `Content-Type: application/problem+json`, URI `type: "https://tools.ietf.org/html/rfc7807#section-3.1"`, `errorCode` canônico e dicionário de erros de validação por propriedade (`errors`).
+   - Unificados `AuthEndpoints.cs` e `DocEndpoints.cs` para utilizar a estrutura canônica de `ProblemDetails`.
+2. **Integração FluentValidation Aprimorada:**
+   - Criada extensão `ValidationResultExtensions.ToDomainError()` em `HookBridge.Application.Common` agrupando falhas por nome de propriedade e preservando retrocompatibilidade total de códigos e mensagens.
+   - Atualizados 11 use cases do Control Plane e Auth para emissão estruturada de erros de validação.
+3. **Prevenção de Vazamento de Dados Sensíveis:**
+   - Hardening em `GlobalExceptionHandler.cs` assegurando que stack traces e mensagens internas de exceção nunca sejam divulgadas em ambiente de Produção, mantendo apenas `traceId` e timestamp correlacionados.
+4. **Testes Automatizados:**
+   - Criados `tests/HookBridge.UnitTests/Errors/ProblemDetailsAndValidationTests.cs` e `tests/HookBridge.IntegrationTests/Errors/ErrorHandlingAndProblemDetailsIntegrationTests.cs`.
+   - 461 testes automatizados passando (365 UnitTests + 96 IntegrationTests).
+
 
 
 

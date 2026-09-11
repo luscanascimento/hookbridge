@@ -58,7 +58,7 @@ public sealed class ReplayDeliveryUseCase
             var validation = await _validator.ValidateAsync(command, cancellationToken);
             if (!validation.IsValid)
             {
-                return Result.Failure<ReplayDeliveryResponse>(DomainError.Validation(validation.Errors[0].PropertyName, validation.Errors[0].ErrorMessage));
+                return Result.Failure<ReplayDeliveryResponse>(validation.ToDomainError());
             }
         }
 
