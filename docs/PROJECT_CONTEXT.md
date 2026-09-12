@@ -3,7 +3,7 @@
 > **Role & Persona:** Staff Software Engineer — Production Release Candidate Hardening  
 > **Repository:** `git@github.com:luscanascimento/hookbridge.git`  
 > **Real Stack:** Backend .NET 9 (`net9.0`, C# 13, EF Core / PostgreSQL), Frontend Angular 21 (Strict TS, Zoneless, PNPM), SignalR, EventFlow Data Plane  
-> **Current Hardening Progress:** FASE 1 (Diagnóstico), FASE 2 (Configuração e Secrets) e FASE 3 (Banco de dados e persistência) Concluídas — FASE 4 (Multi-tenancy e autorização) Próxima  
+> **Current Hardening Progress:** FASE 1 a FASE 5 Concluídas & Pushed (`ac6a131`) — FASE 6 (Logging, auditoria e observabilidade) Próxima  
 > **Hardening Governance Rules:**
 > 1. Preservar arquitetura Domain → Application → Infrastructure → API sem abstrações artificiais.
 > 2. YAGNI, SOLID, DRY e KISS pragmáticos.
@@ -439,7 +439,7 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
 | **FASE 2** | Configuração e secrets (fail-fast options, sanitized configs, no plaintext defaults) | ✅ Concluída & Pushed | `1922bc9` |
 | **FASE 3** | Banco de dados e persistência (versioned EF migrations, indexes, idempotent DDL) | ✅ Concluída & Pushed | `cfae65a` |
 | **FASE 4** | Multi-tenancy e autorização (fail-closed query filter, zero header trust, IDOR defense) | ✅ Concluída & Pushed | `7deb6ad` |
-| **FASE 5** | Tratamento de erros e validação (RFC 7807, zero stack trace leak, FluentValidation) | ✅ Concluída & Pushed | Pending commit/push |
+| **FASE 5** | Tratamento de erros e validação (RFC 7807, zero stack trace leak, FluentValidation) | ✅ Concluída & Pushed | `ac6a131` |
 | **FASE 6** | Logging, auditoria e observabilidade (structured logging, PII sanitization, OTel) | ⏳ Próxima | - |
 | **FASE 7** | Resiliência e chamadas externas (Polly v8, timeout, circuit breaker, SSRF defense) | ⏳ Planejada | - |
 | **FASE 8** | Background processing e consistência (Transactional Outbox, DLQ replay) | ⏳ Planejada | - |
