@@ -85,8 +85,9 @@ public static class DependencyInjection
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = signingKey,
                     ValidateLifetime = true,
-                    ClockSkew = TimeSpan.FromSeconds(30),
-                    RoleClaimType = ClaimTypes.Role
+                    ClockSkew = TimeSpan.FromSeconds(Math.Min(jwt.ClockSkewSeconds, 60)),
+                    RoleClaimType = ClaimTypes.Role,
+                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256]
                 };
 
                 // Enable JWT authentication for WebSocket / SignalR connections via query parameter (?access_token=...)

@@ -21,4 +21,7 @@ public sealed class JwtOptions
 
     [Range(1, 365, ErrorMessage = "Jwt:RefreshTokenExpirationDays must be between 1 and 365 days.")]
     public int RefreshTokenExpirationDays { get; set; } = 7;
+
+    [Range(0, 300, ErrorMessage = "Jwt:ClockSkewSeconds must be between 0 and 300 seconds.")]
+    public int ClockSkewSeconds { get; set; } = 30;
 }

@@ -11,7 +11,8 @@ public static class AuthEndpoints
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/auth")
-            .WithTags("Authentication");
+            .WithTags("Authentication")
+            .RequireRateLimiting("auth-policy");
 
         // 1. Register new Tenant + Admin
         group.MapPost("/register", async (
@@ -57,7 +58,20 @@ public static class AuthEndpoints
         .Produces<AuthResponse>(StatusCodes.Status200OK)
         .Produces<ProblemDetails>(StatusCodes.Status401Unauthorized);
 
-        // 4. Current User Profile
+        // 4. Logout & Revoke Session
+        group.MapPost("/logout", async (
+            [FromBody] LogoutCommand command,
+            [FromServices] LogoutUseCase useCase,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await useCase.ExecuteAsync(command, cancellationToken);
+            return HttpResults.Match(result, StatusCodes.Status200OK);
+        })
+        .WithName("Logout")
+        .WithSummary("Terminates active session and revokes refresh tokens.")
+        .Produces<bool>(StatusCodes.Status200OK);
+
+        // 5. Current User Profile
         group.MapGet("/me", async (
             [FromServices] GetCurrentUserUseCase useCase,
             CancellationToken cancellationToken) =>

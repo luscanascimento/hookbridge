@@ -1,9 +1,11 @@
+using System.Globalization;
 using HookBridge.Api.Endpoints;
 using HookBridge.Api.Hubs;
 using HookBridge.Api.Middleware;
 using HookBridge.Application;
 using HookBridge.Application.Abstractions;
 using HookBridge.Infrastructure;
+using Microsoft.AspNetCore.RateLimiting;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,18 +24,53 @@ builder.Services.AddSingleton<ISimulatorRealtimeNotifier, SimulatorRealtimeNotif
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
-// 4. OpenAPI 3.1 Documentation
+// 4. Rate Limiting Protection
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.ContentType = "application/problem+json";
+        var retryAfterSec = 60;
+        if (context.Lease.TryGetMetadata(System.Threading.RateLimiting.MetadataName.RetryAfter, out var retryAfterSpan))
+        {
+            retryAfterSec = Math.Max(1, (int)retryAfterSpan.TotalSeconds);
+        }
+        context.HttpContext.Response.Headers.RetryAfter = retryAfterSec.ToString(CultureInfo.InvariantCulture);
+
+        var problem = new Microsoft.AspNetCore.Mvc.ProblemDetails
+        {
+            Status = StatusCodes.Status429TooManyRequests,
+            Title = "Too Many Requests",
+            Detail = $"Rate limit exceeded. Please retry after {retryAfterSec} seconds.",
+            Type = "https://tools.ietf.org/html/rfc6585#section-4"
+        };
+        problem.Extensions["errorCode"] = "RateLimit.Exceeded";
+        await context.HttpContext.Response.WriteAsJsonAsync(problem, token);
+    };
+
+    options.AddFixedWindowLimiter("auth-policy", opt =>
+    {
+        opt.PermitLimit = 60;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
+});
+
+// 5. OpenAPI 3.1 Documentation
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// 4. Security & Error Handling Pipeline
+// 6. Security & Error Handling Pipeline
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<TraceContextEnricherMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseRateLimiter();
 
-// 5. Authentication & Authorization Pipeline
+// 7. Authentication & Authorization Pipeline
+app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
 app.UseAuthentication();
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();

@@ -533,3 +533,26 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
    - Criado `tests/HookBridge.IntegrationTests/Resilience/HttpResilienceAndCircuitBreakerIntegrationTests.cs` (injeção como singleton, abertura e isolamento de circuit breaker no `EventFlowClient`).
    - 532 testes automatizados passando (431 UnitTests + 101 IntegrationTests), 0 falhas, 0 warnings.
    - Frontend Angular 21 com build de produção limpo em 3.6s (0 erros, 0 avisos).
+
+### Detailed Log: FASE 8 — Segurança de API e Hardening de Tokens / Autenticação
+1. **Hardening Criptográfico de JWT e Validação de Algoritmos:**
+   - Adicionada restrição estrita de algoritmo em `TokenValidationParameters`: `ValidAlgorithms = [SecurityAlgorithms.HmacSha256]`, bloqueando ataques de downgrade de assinatura (`alg: none`) e vulnerabilidades de confusão de chave (RSA $\leftrightarrow$ HMAC).
+   - Validação em tempo de inicialização em `TokenService`: rejeita `Jwt:SecretKey` inferior a 32 caracteres (256 bits) com exceção explícita.
+   - `ClockSkew` configurável com teto estrito de tolerância (padrão 30s, máximo 60s).
+2. **Rotação Segura de Refresh Tokens e Revogação em Cadeia (RTR):**
+   - Implementada detecção de reuso malicioso em `RefreshTokenUseCase`: ao receber um refresh token já revogado, revoga atômica e imediatamente toda a família de tokens (`TokenFamilyRevocation`) para o usuário afetado com a razão `RevokedDueToCompromisedTokenReuse` e código `Auth.CompromisedToken`.
+   - Criado `LogoutUseCase` e endpoint `POST /api/v1/auth/logout`: revoga refresh tokens e invalida sessões ativas do usuário, registrando auditoria de segurança `User.LoggedOut`.
+3. **Autenticação de API Keys via Middleware:**
+   - Criado `ApiKeyAuthenticationMiddleware`: intercepta requisições com headers `X-Api-Key`, `Authorization: ApiKey ...` ou `Authorization: Bearer hb_...`.
+   - Valida hash SHA-256 no banco ignorando filtros de tenant e injeta `ClaimsPrincipal` com a role `Developer`, `tenant_id` e escopos da chave.
+   - Rejeição fail-closed: chaves de API revogadas ou inexistentes retornam 401 Unauthorized com RFC 7807 `ProblemDetails` e código `Auth.InvalidApiKey`.
+4. **Rate Limiting Defensivo na API:**
+   - Configurado ASP.NET Core Rate Limiter com política `auth-policy` (janela fixa de 60 requisições/minuto) nos endpoints `/api/v1/auth`.
+   - Respostas HTTP 429 Too Many Requests emitidas no formato RFC 7807 `ProblemDetails` com cabeçalho defensivo `Retry-After: 60`.
+5. **Testes Automatizados:**
+   - Criado `tests/HookBridge.UnitTests/Security/JwtHardeningAndAlgorithmValidationTests.cs` (chave mínima de 256 bits, rejeição de `none` alg, chave divergente, claims padronizados).
+   - Criado `tests/HookBridge.UnitTests/Security/RefreshTokenRotationAndFamilyRevocationTests.cs` (rotação limpa, detecção de reuso de token com revogação de família, logout com trilha de auditoria).
+   - Criado `tests/HookBridge.UnitTests/Security/ApiKeyAuthenticationMiddlewareTests.cs` (autenticação por `X-Api-Key`, autenticação por `Bearer hb_...`, rejeição de chave inválida e revogada).
+   - Criado `tests/HookBridge.IntegrationTests/Security/ApiKeyAndRateLimitIntegrationTests.cs` (ingestão e publicação ponta a ponta via API Key sem JWT, revogação de sessão via logout).
+   - **548 testes automatizados passando** (445 UnitTests + 103 IntegrationTests), 0 falhas, 0 warnings.
+   - Frontend Angular 21 com build de produção limpo em 3.7s (0 erros, 0 avisos).

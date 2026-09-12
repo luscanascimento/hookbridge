@@ -16,6 +16,9 @@ public sealed record LoginCommand(
 public sealed record RefreshTokenCommand(
     string RefreshToken);
 
+public sealed record LogoutCommand(
+    string? RefreshToken);
+
 public sealed record InviteUserCommand(
     string Email,
     UserRole Role,
