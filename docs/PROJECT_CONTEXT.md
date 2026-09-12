@@ -440,12 +440,12 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
 | **FASE 3** | Banco de dados e persistência (versioned EF migrations, indexes, idempotent DDL) | ✅ Concluída & Pushed | `cfae65a` |
 | **FASE 4** | Multi-tenancy e autorização (fail-closed query filter, zero header trust, IDOR defense) | ✅ Concluída & Pushed | `7deb6ad` |
 | **FASE 5** | Tratamento de erros e validação (RFC 7807, zero stack trace leak, FluentValidation) | ✅ Concluída & Pushed | `ac6a131` |
-| **FASE 6** | Logging, auditoria e observabilidade (structured logging, PII sanitization, OTel) | ✅ Concluída | `feat(observability)` |
-| **FASE 7** | Resiliência e chamadas externas (Polly v8, timeout, circuit breaker, SSRF defense) | ⏳ Próxima | - |
-| **FASE 8** | Background processing e consistência (Transactional Outbox, DLQ replay) | ⏳ Planejada | - |
-| **FASE 9** | API e contratos externos (OpenAPI 3.1, pagination limits, idempotency keys) | ⏳ Planejada | - |
-| **FASE 10** | Frontend e developer experience (Angular 21 strict, reactive error handling, UX) | ⏳ Planejada | - |
-| **FASE 11** | Testes e validação de ponta a ponta (Cross-tenant security, race conditions, chaos) | ⏳ Planejada | - |
+| **FASE 6** | Logging, auditoria e observabilidade (structured logging, PII sanitization, OTel) | ✅ Concluída & Pushed | `8c4f2bb` |
+| **FASE 7** | Resiliência e chamadas externas (Polly v8, timeout, circuit breaker, SSRF defense) | ✅ Concluída & Pushed | `03fc883` |
+| **FASE 8** | Segurança de API e tokens (JWT hardening, RTR breach detection, ApiKey middleware, rate limit) | ✅ Concluída & Pushed | `25c5f68` |
+| **FASE 9** | Consistência de dados e PostgreSQL (Composite indexes, Npgsql retry, model integrity tests) | ✅ Concluída & Pushed | `9be6936` |
+| **FASE 10** | Frontend e developer experience (Angular strict, server-side logout, RFC 7807 reactive toasts) | ✅ Concluída & Pushed | `feat(frontend)` |
+| **FASE 11** | Testes e validação de ponta a ponta (Cross-tenant security, race conditions, chaos resilience) | ⏳ Próxima (Amanhã) | - |
 | **FASE 12** | Operabilidade, CI/CD e governança de release (Docker multi-stage, CI matrix, RC check) | ⏳ Planejada | - |
 
 ### Detailed Log: FASE 4 — Multi-Tenancy e Autorização
@@ -576,3 +576,20 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
    - Criado `tests/HookBridge.IntegrationTests/Persistence/DatabaseTransactionAndResilienceTests.cs` (testes de transações atômicas com rollback e commit, integridade de FKs e isolamento de consultas multi-tenant).
    - **555 testes automatizados passando** (449 UnitTests + 106 IntegrationTests), 0 falhas, 0 warnings.
    - Frontend Angular com build de produção limpo em 4.3s (0 erros, 0 avisos).
+
+### Detailed Log: FASE 10 — Frontend e Developer Experience
+1. **Revogação Real de Tokens no Servidor (`AuthService.logout`):**
+   - Atualizado o método `logout()` no frontend Angular para despachar requisição `POST /api/v1/auth/logout` contendo o `refreshToken` atual.
+   - Garante revogação física da família de tokens no banco de dados e disparo do evento de auditoria `User.LoggedOut`, com fallback gracioso para limpeza de storage local em cenários offline.
+2. **Tratamento Reativo de Erros Defensivo (RFC 7807) & Toasts:**
+   - Integrado `ToastService` ao `errorInterceptor` em `src/HookBridge.Web/src/app/core/http/interceptors/error.interceptor.ts`.
+   - Extração e formatação automática de dicionários de erros de validação (`ProblemDetails.errors`) agregando mensagens legíveis para o usuário.
+   - Tratamento de **Rate Limiting (HTTP 429)**: extrai o cabeçalho `Retry-After` e exibe notificação amigável com tempo de espera antes de novas requisições.
+   - Tratamento de **Acesso Negado (HTTP 403)**: toast de falta de privilégios com contexto claro de autorização.
+   - Tratamento de **Sessão Expirada (HTTP 401)**: notificação amigável de sessão finalizada/invalidada e redirecionamento gracioso para a tela de autenticação.
+   - Tratamento de **Servidor Indisponível (HTTP 0)**: detecção de desconexão de rede ou queda do backend.
+   - Tratamento de **Falha do Servidor (HTTP >= 500)**: exibição controlada sem vazamento de stack trace.
+3. **Validação & Estabilidade:**
+   - `tsc --noEmit` executado com 0 erros de tipagem.
+   - `ng build --configuration production` gerando bundle em 4.8s com 0 erros e 0 avisos.
+   - Todos os 555 testes automatizados do backend (.NET 9) passando sem falhas.

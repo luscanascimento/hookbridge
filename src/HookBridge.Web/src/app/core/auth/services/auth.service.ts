@@ -76,6 +76,17 @@ export class AuthService {
   }
 
   logout(): void {
+    const currentRefresh = this.refreshToken();
+    if (currentRefresh) {
+      // Notify backend to revoke refresh token family and write security audit log
+      this.http.post(`${environment.apiBaseUrl}/auth/logout`, {
+        refreshToken: currentRefresh
+      }).subscribe({
+        next: () => {},
+        error: () => {} // Graceful fallback if offline or network failure
+      });
+    }
+
     this.clearStorage();
     this.currentUser.set(null);
     this.token.set(null);
