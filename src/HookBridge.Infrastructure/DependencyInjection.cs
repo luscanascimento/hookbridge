@@ -139,7 +139,8 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString, npgsqlOptions =>
             {
                 npgsqlOptions.MigrationsAssembly(typeof(HookBridgeDbContext).Assembly.FullName);
-                npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
+                npgsqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null);
+                npgsqlOptions.CommandTimeout(30);
             });
         });
 

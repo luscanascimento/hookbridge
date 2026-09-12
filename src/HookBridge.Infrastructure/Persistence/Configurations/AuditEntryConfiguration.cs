@@ -39,5 +39,6 @@ public sealed class AuditEntryConfiguration : IEntityTypeConfiguration<AuditEntr
         builder.HasIndex(a => new { a.TenantId, a.Timestamp });
         builder.HasIndex(a => new { a.TenantId, a.TraceId });
         builder.HasIndex(a => new { a.TenantId, a.ResourceType, a.ResourceId });
+        builder.HasIndex(a => new { a.TenantId, a.Action, a.Timestamp });
     }
 }

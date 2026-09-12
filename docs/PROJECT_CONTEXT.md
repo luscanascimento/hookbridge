@@ -556,3 +556,23 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
    - Criado `tests/HookBridge.IntegrationTests/Security/ApiKeyAndRateLimitIntegrationTests.cs` (ingestão e publicação ponta a ponta via API Key sem JWT, revogação de sessão via logout).
    - **548 testes automatizados passando** (445 UnitTests + 103 IntegrationTests), 0 falhas, 0 warnings.
    - Frontend Angular 21 com build de produção limpo em 3.7s (0 erros, 0 avisos).
+
+### Detailed Log: FASE 9 — Consistência de Dados, Migrations e PostgreSQL
+1. **Otimização de Índices Compostos e Integridade Relacional:**
+   - `DeliveryConfiguration`: adicionado índice composto `(TenantId, EndpointId, Status, CreatedAt)` para viabilizar consultas paginadas e métricas com latência sub-milisegundo sob alto volume.
+   - `AuditEntryConfiguration`: adicionado índice composto `(TenantId, Action, Timestamp)` acelerando buscas e relatórios de auditoria de segurança multi-tenant.
+   - Verificação e garantia de chaves primárias e unicidade de chaves de negócio (`Tenant.Identifier`, `User.(TenantId, Email)`, `ApiKey.KeyHash`, `RefreshToken.TokenHash`, `Attempt.(DeliveryId, AttemptNumber)`).
+2. **Resiliência e Retries de Conexão no Npgsql (PostgreSQL):**
+   - Configuração de `EnableRetryOnFailure` no DbContext PostgreSQL com `maxRetryCount: 5`, `maxRetryDelay: 10s` para tratamento automático de falhas transitórias e reconexões de rede/banco.
+   - Configuração defensiva de `CommandTimeout(30)` evitando bloqueios prolongados por consultas demoradas.
+3. **Isolamento de Transações e Multi-Tenancy:**
+   - Suíte de testes validando atomicidade de transações: `DatabaseTransaction_WhenRolledBack_EnsuresZeroPartialStatePersisted` comprova que rollbacks não deixam resquícios de estado no banco.
+   - `DatabaseTransaction_WhenCommitted_PersistsAllChangesAtomically` valida persistência atômica sob commit.
+   - `Database_MultiTenantQueryFilter_StrictlyIsolatesCrossTenantQueries` confirma isolamento estrito de queries entre tenants distintos.
+4. **Auditoria Automática de Timestamps (`IAuditableEntity`):**
+   - Validação de que `HookBridgeDbContext.SaveChangesAsync` injeta automaticamente e consistentemente `CreatedAt` e `UpdatedAt` através do `IDateTimeProvider`.
+5. **Testes Automatizados & Qualidade:**
+   - Criado `tests/HookBridge.UnitTests/Persistence/ModelIntegrityAndMappingTests.cs` (validação de chaves primárias de todas as entidades, garantia de que todas as entidades `ITenantScoped` possuem `TenantId` não-nulo e filtro global ativo, unicidade de chaves e timestamps automáticos).
+   - Criado `tests/HookBridge.IntegrationTests/Persistence/DatabaseTransactionAndResilienceTests.cs` (testes de transações atômicas com rollback e commit, integridade de FKs e isolamento de consultas multi-tenant).
+   - **555 testes automatizados passando** (449 UnitTests + 106 IntegrationTests), 0 falhas, 0 warnings.
+   - Frontend Angular com build de produção limpo em 4.3s (0 erros, 0 avisos).
