@@ -30,6 +30,8 @@
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.18.0" />
+    <PackageReference Include="Polly.Core" Version="8.4.2" />
+    <PackageReference Include="Polly.Extensions" Version="8.4.2" />
   </ItemGroup>
 
 </Project>

@@ -167,11 +167,11 @@ public sealed class BrokerAndDbOutageChaosTests : IDisposable
 
         var replayRes = await client.ReplayDlqAsync(50);
         replayRes.IsFailure.Should().BeTrue();
-        replayRes.Error.Code.Should().Be("EventFlow.ConnectionError");
+        replayRes.Error.Code.Should().BeOneOf("EventFlow.ConnectionError", "EventFlow.CircuitBroken");
 
         var purgeRes = await client.PurgeDlqAsync();
         purgeRes.IsFailure.Should().BeTrue();
-        purgeRes.Error.Code.Should().Be("EventFlow.ConnectionError");
+        purgeRes.Error.Code.Should().BeOneOf("EventFlow.ConnectionError", "EventFlow.CircuitBroken");
     }
 
     [Fact]

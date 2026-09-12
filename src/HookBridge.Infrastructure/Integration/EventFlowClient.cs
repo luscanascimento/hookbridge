@@ -5,8 +5,11 @@ using HookBridge.Application.Abstractions;
 using HookBridge.Application.Integration.DTOs;
 using HookBridge.Domain.Common;
 using HookBridge.Domain.Security;
+using HookBridge.Infrastructure.Resilience;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Polly.CircuitBreaker;
+using Polly.Timeout;
 
 namespace HookBridge.Infrastructure.Integration;
 
@@ -15,15 +18,32 @@ public sealed partial class EventFlowClient : IEventFlowClient
     private readonly HttpClient _httpClient;
     private readonly EventFlowOptions _options;
     private readonly ILogger<EventFlowClient> _logger;
+    private readonly IHttpResiliencePipelineProvider _resilienceProvider;
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 
     public EventFlowClient(
         HttpClient httpClient,
         IOptions<EventFlowOptions> options,
         ILogger<EventFlowClient> logger)
+        : this(
+            httpClient,
+            options,
+            new HttpResiliencePipelineProvider(
+                Microsoft.Extensions.Options.Options.Create(new ResilienceOptions()),
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<HttpResiliencePipelineProvider>.Instance),
+            logger)
+    {
+    }
+
+    public EventFlowClient(
+        HttpClient httpClient,
+        IOptions<EventFlowOptions> options,
+        IHttpResiliencePipelineProvider resilienceProvider,
+        ILogger<EventFlowClient> logger)
     {
         _options = options.Value;
         _logger = logger;
+        _resilienceProvider = resilienceProvider;
         _httpClient = httpClient;
 
         if (_httpClient.BaseAddress == null && !string.IsNullOrWhiteSpace(_options.BaseUrl))
@@ -55,18 +75,28 @@ public sealed partial class EventFlowClient : IEventFlowClient
     [LoggerMessage(EventId = 2007, Level = LogLevel.Warning, Message = "DLQ operation {Operation} failed: {Error}")]
     private static partial void LogDlqOperationFailed(ILogger logger, string operation, string error);
 
+    [LoggerMessage(EventId = 2008, Level = LogLevel.Error, Message = "EventFlow operation aborted: Circuit breaker is OPEN.")]
+    private static partial void LogCircuitBroken(ILogger logger, Exception ex);
+
+    [LoggerMessage(EventId = 2009, Level = LogLevel.Error, Message = "EventFlow operation aborted: Request timed out.")]
+    private static partial void LogTimeoutRejected(ILogger logger, Exception ex);
+
     public async Task<Result<EventFlowIngestResponse>> IngestEventAsync(EventFlowIngestRequest request, CancellationToken cancellationToken = default)
     {
         try
         {
-            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/events")
+            var response = await _resilienceProvider.ExecuteAsync(async ct =>
             {
-                Content = JsonContent.Create(request)
-            };
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/events")
+                {
+                    Content = JsonContent.Create(request)
+                };
 
-            AddSecurityAndTracingHeaders(httpRequest, request.TraceParent, request.CorrelationId);
+                AddSecurityAndTracingHeaders(httpRequest, request.TraceParent, request.CorrelationId);
 
-            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+                return await _httpClient.SendAsync(httpRequest, ct);
+            }, cancellationToken);
+
             if (response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadFromJsonAsync<EventFlowIngestResponse>(JsonOpts, cancellationToken);
@@ -92,6 +122,20 @@ public sealed partial class EventFlowClient : IEventFlowClient
                 "EventFlow.IngestFailed",
                 $"EventFlow ingestion rejected with status code {(int)response.StatusCode}: {errorBody}"));
         }
+        catch (BrokenCircuitException ex)
+        {
+            LogCircuitBroken(_logger, ex);
+            return Result.Failure<EventFlowIngestResponse>(DomainError.Failure(
+                "EventFlow.CircuitBroken",
+                $"EventFlow circuit breaker is OPEN: {ex.Message}"));
+        }
+        catch (TimeoutRejectedException ex)
+        {
+            LogTimeoutRejected(_logger, ex);
+            return Result.Failure<EventFlowIngestResponse>(DomainError.Failure(
+                "EventFlow.Timeout",
+                $"EventFlow request timed out: {ex.Message}"));
+        }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
@@ -109,10 +153,14 @@ public sealed partial class EventFlowClient : IEventFlowClient
     {
         try
         {
-            using var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/dlq?count={count}");
-            AddSecurityAndTracingHeaders(httpRequest, null, null);
+            var response = await _resilienceProvider.ExecuteAsync(async ct =>
+            {
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/dlq?count={count}");
+                AddSecurityAndTracingHeaders(httpRequest, null, null);
 
-            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+                return await _httpClient.SendAsync(httpRequest, ct);
+            }, cancellationToken);
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<DlqPeekResponseInternal>(JsonOpts, cancellationToken);
@@ -126,6 +174,20 @@ public sealed partial class EventFlowClient : IEventFlowClient
             return Result.Failure<IReadOnlyList<DeadLetterMessageDto>>(DomainError.Failure(
                 "EventFlow.DlqPeekFailed",
                 $"Failed to peek DLQ: {error}"));
+        }
+        catch (BrokenCircuitException ex)
+        {
+            LogCircuitBroken(_logger, ex);
+            return Result.Failure<IReadOnlyList<DeadLetterMessageDto>>(DomainError.Failure(
+                "EventFlow.CircuitBroken",
+                $"EventFlow circuit breaker is OPEN: {ex.Message}"));
+        }
+        catch (TimeoutRejectedException ex)
+        {
+            LogTimeoutRejected(_logger, ex);
+            return Result.Failure<IReadOnlyList<DeadLetterMessageDto>>(DomainError.Failure(
+                "EventFlow.Timeout",
+                $"EventFlow request timed out: {ex.Message}"));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -144,10 +206,14 @@ public sealed partial class EventFlowClient : IEventFlowClient
     {
         try
         {
-            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/dlq/replay?maxCount={maxCount}");
-            AddSecurityAndTracingHeaders(httpRequest, null, null);
+            var response = await _resilienceProvider.ExecuteAsync(async ct =>
+            {
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/dlq/replay?maxCount={maxCount}");
+                AddSecurityAndTracingHeaders(httpRequest, null, null);
 
-            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+                return await _httpClient.SendAsync(httpRequest, ct);
+            }, cancellationToken);
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<DlqReplayResponseInternal>(JsonOpts, cancellationToken);
@@ -161,6 +227,20 @@ public sealed partial class EventFlowClient : IEventFlowClient
             return Result.Failure<int>(DomainError.Failure(
                 "EventFlow.DlqReplayFailed",
                 $"Failed to replay DLQ: {error}"));
+        }
+        catch (BrokenCircuitException ex)
+        {
+            LogCircuitBroken(_logger, ex);
+            return Result.Failure<int>(DomainError.Failure(
+                "EventFlow.CircuitBroken",
+                $"EventFlow circuit breaker is OPEN: {ex.Message}"));
+        }
+        catch (TimeoutRejectedException ex)
+        {
+            LogTimeoutRejected(_logger, ex);
+            return Result.Failure<int>(DomainError.Failure(
+                "EventFlow.Timeout",
+                $"EventFlow request timed out: {ex.Message}"));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -179,10 +259,14 @@ public sealed partial class EventFlowClient : IEventFlowClient
     {
         try
         {
-            using var httpRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/dlq");
-            AddSecurityAndTracingHeaders(httpRequest, null, null);
+            var response = await _resilienceProvider.ExecuteAsync(async ct =>
+            {
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/dlq");
+                AddSecurityAndTracingHeaders(httpRequest, null, null);
 
-            var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+                return await _httpClient.SendAsync(httpRequest, ct);
+            }, cancellationToken);
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<DlqPurgeResponseInternal>(JsonOpts, cancellationToken);
@@ -196,6 +280,20 @@ public sealed partial class EventFlowClient : IEventFlowClient
             return Result.Failure<int>(DomainError.Failure(
                 "EventFlow.DlqPurgeFailed",
                 $"Failed to purge DLQ: {error}"));
+        }
+        catch (BrokenCircuitException ex)
+        {
+            LogCircuitBroken(_logger, ex);
+            return Result.Failure<int>(DomainError.Failure(
+                "EventFlow.CircuitBroken",
+                $"EventFlow circuit breaker is OPEN: {ex.Message}"));
+        }
+        catch (TimeoutRejectedException ex)
+        {
+            LogTimeoutRejected(_logger, ex);
+            return Result.Failure<int>(DomainError.Failure(
+                "EventFlow.Timeout",
+                $"EventFlow request timed out: {ex.Message}"));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using HookBridge.Application.Abstractions;
@@ -7,6 +8,10 @@ using Microsoft.Extensions.Options;
 
 namespace HookBridge.Infrastructure.Security;
 
+/// <summary>
+/// Hardened SSRF defense engine defending against private IPs, loopbacks, cloud metadata (IMDS),
+/// decimal/octal/hex IP evasions, open redirects, and DNS rebinding (TOCTOU) at the socket level.
+/// </summary>
 public sealed partial class SsrfGuard : ISsrfGuard
 {
     private static readonly HashSet<int> ProhibitedPorts = new()
@@ -137,7 +142,18 @@ public sealed partial class SsrfGuard : ISsrfGuard
             return Result.Failure<bool>(DomainError.Validation("Ssrf.ProhibitedHost", $"Destination host '{host}' is prohibited for webhook endpoints."));
         }
 
-        // 3. Direct IP checking (IPv4 and IPv6)
+        // 3. Alternative IP representation evasion detection (e.g. 2130706433, 0x7f000001, 0177.0.0.1)
+        if (TryNormalizeAlternativeIp(host, out var alternativeIp) && alternativeIp != null)
+        {
+            if (IsProhibitedIpAddress(alternativeIp))
+            {
+                LogProhibitedIp(_logger, alternativeIp);
+                return Result.Failure<bool>(DomainError.Validation("Ssrf.ProhibitedIp", $"Destination host '{host}' resolves to prohibited internal address '{alternativeIp}'."));
+            }
+            return Result.Success(true);
+        }
+
+        // 4. Standard Direct IP checking (IPv4 and IPv6)
         if (IPAddress.TryParse(host, out var directIp))
         {
             if (IsProhibitedIpAddress(directIp))
@@ -149,7 +165,7 @@ public sealed partial class SsrfGuard : ISsrfGuard
             return Result.Success(true);
         }
 
-        // 4. DNS Resolution IP checking (if enabled)
+        // 5. DNS Resolution IP checking (if enabled)
         if (_options.ResolveDns)
         {
             try
@@ -177,6 +193,214 @@ public sealed partial class SsrfGuard : ISsrfGuard
         }
 
         return Result.Success(true);
+    }
+
+    public async Task<Result<bool>> ValidateRedirectUrlAsync(string currentUrl, string redirectUrl, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(redirectUrl))
+        {
+            return Result.Failure<bool>(DomainError.Validation("Ssrf.EmptyRedirectUrl", "Redirect destination URL cannot be empty."));
+        }
+
+        Uri targetUri;
+        if (Uri.TryCreate(redirectUrl, UriKind.Absolute, out var absoluteUri) &&
+            (absoluteUri.Scheme == Uri.UriSchemeHttp || absoluteUri.Scheme == Uri.UriSchemeHttps))
+        {
+            targetUri = absoluteUri;
+        }
+        else if (Uri.TryCreate(currentUrl, UriKind.Absolute, out var baseUri) &&
+                 Uri.TryCreate(baseUri, redirectUrl, out var combinedUri))
+        {
+            targetUri = combinedUri;
+        }
+        else
+        {
+            return Result.Failure<bool>(DomainError.Validation("Ssrf.InvalidRedirectUri", "Redirect URI is malformed and could not be resolved."));
+        }
+
+        return await ValidateUrlAsync(targetUri.ToString(), cancellationToken);
+    }
+
+    public SocketsHttpHandler CreateSafeSocketsHttpHandler()
+    {
+        return new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false,
+            ConnectCallback = async (context, cancellationToken) =>
+            {
+                var host = context.DnsEndPoint.Host;
+                var port = context.DnsEndPoint.Port;
+
+                if (_options.Enabled && !_options.AllowedHosts.Any(h => string.Equals(h, host, StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (IsProhibitedHostname(host))
+                    {
+                        LogProhibitedHost(_logger, host);
+                        throw new SocketException((int)SocketError.AccessDenied);
+                    }
+
+                    if (TryNormalizeAlternativeIp(host, out var altIp) && altIp != null && IsProhibitedIpAddress(altIp))
+                    {
+                        LogProhibitedIp(_logger, altIp);
+                        throw new SocketException((int)SocketError.AccessDenied);
+                    }
+
+                    var addresses = await Dns.GetHostAddressesAsync(host, cancellationToken);
+                    if (addresses.Length == 0)
+                    {
+                        throw new SocketException((int)SocketError.HostNotFound);
+                    }
+
+                    var targetIp = addresses.FirstOrDefault(ip => !IsProhibitedIpAddress(ip));
+                    if (targetIp == null)
+                    {
+                        LogProhibitedResolvedIp(_logger, host, addresses[0]);
+                        throw new SocketException((int)SocketError.AccessDenied);
+                    }
+
+                    var socket = new Socket(targetIp.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
+                    {
+                        NoDelay = true
+                    };
+
+                    try
+                    {
+                        await socket.ConnectAsync(new IPEndPoint(targetIp, port), cancellationToken);
+                        return new NetworkStream(socket, ownsSocket: true);
+                    }
+                    catch
+                    {
+                        socket.Dispose();
+                        throw;
+                    }
+                }
+                else
+                {
+                    var addresses = await Dns.GetHostAddressesAsync(host, cancellationToken);
+                    if (addresses.Length == 0)
+                    {
+                        throw new SocketException((int)SocketError.HostNotFound);
+                    }
+
+                    var socket = new Socket(addresses[0].AddressFamily, SocketType.Stream, ProtocolType.Tcp)
+                    {
+                        NoDelay = true
+                    };
+
+                    try
+                    {
+                        await socket.ConnectAsync(new IPEndPoint(addresses[0], port), cancellationToken);
+                        return new NetworkStream(socket, ownsSocket: true);
+                    }
+                    catch
+                    {
+                        socket.Dispose();
+                        throw;
+                    }
+                }
+            }
+        };
+    }
+
+    /// <summary>
+    /// Detects and normalizes alternative IP representations used in SSRF bypass attempts:
+    /// pure decimal integers (e.g. 2130706433), hex integers (e.g. 0x7f000001), and dotted octal/hex notation (e.g. 0177.0.0.1).
+    /// </summary>
+    public static bool TryNormalizeAlternativeIp(string host, out IPAddress? normalizedIp)
+    {
+        normalizedIp = null;
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return false;
+        }
+
+        // 1. Pure decimal integer (e.g., 2130706433 -> 127.0.0.1)
+        if (uint.TryParse(host, NumberStyles.None, CultureInfo.InvariantCulture, out var decimalIp))
+        {
+            normalizedIp = ConvertUintToIPv4(decimalIp);
+            return true;
+        }
+
+        // 2. Pure hexadecimal integer (e.g., 0x7f000001 -> 127.0.0.1)
+        if (host.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            var hexSpan = host.AsSpan(2);
+            if (uint.TryParse(hexSpan, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var hexIp))
+            {
+                normalizedIp = ConvertUintToIPv4(hexIp);
+                return true;
+            }
+        }
+
+        // 3. Dotted octal/hex notation (e.g., 0177.0.0.1 or 0x7f.0.0.1)
+        if (host.Contains('.'))
+        {
+            var parts = host.Split('.');
+            if (parts.Length == 4)
+            {
+                var bytes = new byte[4];
+                var hasAlternativeFormat = false;
+
+                for (var i = 0; i < 4; i++)
+                {
+                    var part = parts[i];
+                    if (string.IsNullOrEmpty(part))
+                    {
+                        return false;
+                    }
+
+                    if (part.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasAlternativeFormat = true;
+                        if (!byte.TryParse(part.AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out bytes[i]))
+                        {
+                            return false;
+                        }
+                    }
+                    else if (part.Length > 1 && part.StartsWith('0'))
+                    {
+                        hasAlternativeFormat = true;
+                        try
+                        {
+                            var octalVal = Convert.ToByte(part, 8);
+                            bytes[i] = octalVal;
+                        }
+                        catch
+                        {
+                            return false;
+                        }
+                    }
+                    else if (byte.TryParse(part, NumberStyles.None, CultureInfo.InvariantCulture, out var b))
+                    {
+                        bytes[i] = b;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
+
+                if (hasAlternativeFormat)
+                {
+                    normalizedIp = new IPAddress(bytes);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static IPAddress ConvertUintToIPv4(uint value)
+    {
+        var bytes = new byte[4]
+        {
+            (byte)((value >> 24) & 0xFF),
+            (byte)((value >> 16) & 0xFF),
+            (byte)((value >> 8) & 0xFF),
+            (byte)(value & 0xFF)
+        };
+        return new IPAddress(bytes);
     }
 
     private static bool IsProhibitedHostname(string host)

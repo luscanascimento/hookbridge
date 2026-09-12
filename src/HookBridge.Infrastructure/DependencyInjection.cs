@@ -43,12 +43,18 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<HookBridge.Infrastructure.Resilience.ResilienceOptions>()
+            .BindConfiguration(HookBridge.Infrastructure.Resilience.ResilienceOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenService, TokenService>();
         services.AddSingleton<ISecretEncryptor, AesSecretEncryptor>();
         services.AddSingleton<IApiKeyGenerator, KeyGenerator>();
         services.AddSingleton<ISsrfGuard, SsrfGuard>();
         services.AddSingleton<IWebhookSigner, WebhookSigner>();
+        services.AddSingleton<HookBridge.Infrastructure.Resilience.IHttpResiliencePipelineProvider, HookBridge.Infrastructure.Resilience.HttpResiliencePipelineProvider>();
 
         // 3. EventFlow Integration HTTP Client
         services.AddHttpClient<IEventFlowClient, HookBridge.Infrastructure.Integration.EventFlowClient>();

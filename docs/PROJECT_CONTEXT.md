@@ -500,8 +500,36 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
    - Criados `tests/HookBridge.IntegrationTests/Observability/ObservabilityHardeningIntegrationTests.cs` (verificação end-to-end de propagação de `X-Trace-Id`/`X-Correlation-Id`, persistência de auditoria sem vazamento e rotação segura de segredos).
    - 506 testes automatizados passando (407 UnitTests + 99 IntegrationTests). Build frontend Angular 21 limpo com 0 erros.
 
-
-
-
-
-
+### Detailed Log: FASE 7 — Resiliência e Chamadas Externas (Polly v8, Timeouts, Circuit Breaker, SSRF Defense)
+1. **Infraestrutura Polly v8 & Opções de Resiliência:**
+   - Adicionados pacotes `Polly.Core` e `Polly.Extensions` (v8.4.2) ao `HookBridge.Infrastructure`.
+   - Criado `ResilienceOptions.cs` com validações via DataAnnotations e `ValidateOnStart()`:
+     - `MaxRetryAttempts` (padrão 3, range 1-10)
+     - `BaseDelayMs` (padrão 200ms) e `MaxDelayMs` (padrão 5000ms) com exponential backoff e jitter
+     - `CircuitBreakerFailureRatio` (padrão 0.5) e `CircuitBreakerSamplingDurationSeconds` (padrão 10s)
+     - `CircuitBreakerMinimumThroughput` (padrão 5) e `CircuitBreakerBreakDurationSeconds` (padrão 30s)
+     - `AttemptTimeoutSeconds` (padrão 5s) e `TotalRequestTimeoutSeconds` (padrão 20s)
+2. **HttpResiliencePipelineProvider (Polly v8 Pipeline):**
+   - Criada interface `IHttpResiliencePipelineProvider` e implementação `HttpResiliencePipelineProvider` orquestrando:
+     - *Outer:* Timeout total da requisição (`TotalRequestTimeoutSeconds`).
+     - *Retry:* Exponential backoff com Jitter, respeitando o cabeçalho `Retry-After` (formatos Delta seconds e Date) em respostas HTTP 429/503.
+     - *Circuit Breaker:* Integrado com métrica OpenTelemetry `HookBridgeDiagnostics.ActiveCircuitBreakers` (incrementa em `OnOpened`, decrementa em `OnClosed`) e logging de estado (`OPEN`, `HALF-OPEN`, `CLOSED`).
+     - *Inner:* Timeout por tentativa (`AttemptTimeoutSeconds`).
+3. **Hardening no EventFlowClient:**
+   - Integração completa com `IHttpResiliencePipelineProvider.ExecuteAsync`.
+   - Delegates instanciam novos `HttpRequestMessage` por tentativa, prevenindo `InvalidOperationException: The request message was already sent`.
+   - Tratamento explícito de `BrokenCircuitException` retornando erro de domínio `EventFlow.CircuitBroken`.
+   - Tratamento de `TimeoutRejectedException` retornando erro de domínio `EventFlow.Timeout`.
+4. **Defesa Avançada contra SSRF e Evasões (`SsrfGuard`):**
+   - Detecção e normalização de representações alternativas de IP:
+     - Notação inteira/decimal pura (ex: `http://2130706433/` $\to$ `127.0.0.1`, `http://2852039166/` $\to$ `169.254.169.254`).
+     - Notação hexadecimal pura (ex: `http://0x7f000001/` $\to$ `127.0.0.1`, `http://0xa9fea9fe/` $\to$ `169.254.169.254`).
+     - Notação pontuada com segmentos octais ou hexadecimais (ex: `http://0177.0.0.1/`, `https://0x7f.0.0.1/`).
+   - Validação de Open Redirects (`ValidateRedirectUrlAsync`): garante que URLs de redirecionamento sejam estritamente validadas contra as regras SSRF antes do dispatch.
+   - Defesa contra DNS Rebinding (TOCTOU) no nível de socket: `CreateSafeSocketsHttpHandler()` com `AllowAutoRedirect = false` e `ConnectCallback` que valida os IPs de destino no exato momento da conexão TCP.
+5. **Testes Automatizados:**
+   - Criado `tests/HookBridge.UnitTests/Resilience/PollyResiliencePipelineTests.cs` (retries em 5xx, respeito a `Retry-After`, abertura de circuit breaker, timeout por tentativa).
+   - Criado `tests/HookBridge.UnitTests/Security/SsrfGuardAdvancedEvasionTests.cs` (evasão decimal, evasão hex, evasão octal, redirect seguro e inseguro, safe sockets handler).
+   - Criado `tests/HookBridge.IntegrationTests/Resilience/HttpResilienceAndCircuitBreakerIntegrationTests.cs` (injeção como singleton, abertura e isolamento de circuit breaker no `EventFlowClient`).
+   - 532 testes automatizados passando (431 UnitTests + 101 IntegrationTests), 0 falhas, 0 warnings.
+   - Frontend Angular 21 com build de produção limpo em 3.6s (0 erros, 0 avisos).
