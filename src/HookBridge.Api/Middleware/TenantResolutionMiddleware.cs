@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Security.Claims;
 using HookBridge.Application.Abstractions;
+using HookBridge.Domain.Diagnostics;
 using HookBridge.Domain.Enums;
 using HookBridge.Infrastructure.Security;
 
@@ -21,6 +23,15 @@ public sealed class TenantResolutionMiddleware
 
     public async Task InvokeAsync(HttpContext context, ITenantContext tenantContext, ICurrentUser currentUser)
     {
+        var clientIp = context.Connection.RemoteIpAddress?.ToString();
+        var traceId = Activity.Current?.TraceId.ToString() ?? Activity.Current?.Id ?? context.TraceIdentifier;
+
+        if (currentUser is CurrentUser mutableUser)
+        {
+            mutableUser.IpAddress = clientIp;
+            mutableUser.TraceId = traceId;
+        }
+
         // 1. Check for authenticated JWT user identity and claims
         if (context.User.Identity?.IsAuthenticated == true)
         {
@@ -38,24 +49,26 @@ public sealed class TenantResolutionMiddleware
 
             var tenantSlugClaim = context.User.FindFirst("tenant_slug")?.Value;
 
-            if (currentUser is CurrentUser mutableUser)
+            if (currentUser is CurrentUser authUser)
             {
                 if (Guid.TryParse(subClaim, out var parsedUserId))
                 {
-                    mutableUser.UserId = parsedUserId;
+                    authUser.UserId = parsedUserId;
                 }
 
-                mutableUser.Email = emailClaim;
+                authUser.Email = emailClaim;
 
                 if (Enum.TryParse<UserRole>(roleClaim, true, out var parsedRole))
                 {
-                    mutableUser.Role = parsedRole;
+                    authUser.Role = parsedRole;
                 }
             }
 
             if (!string.IsNullOrWhiteSpace(tenantClaim) && Guid.TryParse(tenantClaim, out var parsedTenantId))
             {
                 tenantContext.SetTenant(parsedTenantId, tenantSlugClaim);
+                Activity.Current?.SetTag(HookBridgeDiagnostics.TagTenantId, parsedTenantId.ToString());
+                Activity.Current?.SetBaggage(HookBridgeDiagnostics.TagTenantId, parsedTenantId.ToString());
             }
         }
         // 2. Zero Header Trust: Unauthenticated requests cannot set or spoof tenant context via client-sent headers.

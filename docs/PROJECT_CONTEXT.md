@@ -3,7 +3,7 @@
 > **Role & Persona:** Staff Software Engineer — Production Release Candidate Hardening  
 > **Repository:** `git@github.com:luscanascimento/hookbridge.git`  
 > **Real Stack:** Backend .NET 9 (`net9.0`, C# 13, EF Core / PostgreSQL), Frontend Angular 21 (Strict TS, Zoneless, PNPM), SignalR, EventFlow Data Plane  
-> **Current Hardening Progress:** FASE 1 a FASE 5 Concluídas & Pushed (`ac6a131`) — FASE 6 (Logging, auditoria e observabilidade) Próxima  
+> **Current Hardening Progress:** FASE 1 a FASE 6 Concluídas & Testadas (`506 testes passando`) — FASE 7 (Resiliência e chamadas externas) Próxima  
 > **Hardening Governance Rules:**
 > 1. Preservar arquitetura Domain → Application → Infrastructure → API sem abstrações artificiais.
 > 2. YAGNI, SOLID, DRY e KISS pragmáticos.
@@ -440,8 +440,8 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
 | **FASE 3** | Banco de dados e persistência (versioned EF migrations, indexes, idempotent DDL) | ✅ Concluída & Pushed | `cfae65a` |
 | **FASE 4** | Multi-tenancy e autorização (fail-closed query filter, zero header trust, IDOR defense) | ✅ Concluída & Pushed | `7deb6ad` |
 | **FASE 5** | Tratamento de erros e validação (RFC 7807, zero stack trace leak, FluentValidation) | ✅ Concluída & Pushed | `ac6a131` |
-| **FASE 6** | Logging, auditoria e observabilidade (structured logging, PII sanitization, OTel) | ⏳ Próxima | - |
-| **FASE 7** | Resiliência e chamadas externas (Polly v8, timeout, circuit breaker, SSRF defense) | ⏳ Planejada | - |
+| **FASE 6** | Logging, auditoria e observabilidade (structured logging, PII sanitization, OTel) | ✅ Concluída | `feat(observability)` |
+| **FASE 7** | Resiliência e chamadas externas (Polly v8, timeout, circuit breaker, SSRF defense) | ⏳ Próxima | - |
 | **FASE 8** | Background processing e consistência (Transactional Outbox, DLQ replay) | ⏳ Planejada | - |
 | **FASE 9** | API e contratos externos (OpenAPI 3.1, pagination limits, idempotency keys) | ⏳ Planejada | - |
 | **FASE 10** | Frontend e developer experience (Angular 21 strict, reactive error handling, UX) | ⏳ Planejada | - |
@@ -475,6 +475,31 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
 4. **Testes Automatizados:**
    - Criados `tests/HookBridge.UnitTests/Errors/ProblemDetailsAndValidationTests.cs` e `tests/HookBridge.IntegrationTests/Errors/ErrorHandlingAndProblemDetailsIntegrationTests.cs`.
    - 461 testes automatizados passando (365 UnitTests + 96 IntegrationTests).
+
+### Detailed Log: FASE 6 — Logging, Auditoria e Observabilidade
+1. **Sanitização de PII e Dados Sensíveis (Zero Leakage):**
+   - Criado `SensitiveDataSanitizer.cs` em `HookBridge.Domain.Security` para sanitização de alta performance:
+     - Mascaramento e redação de headers HTTP sensíveis (`Authorization: Bearer [REDACTED]`, `Basic [REDACTED]`, `Cookie`, `Set-Cookie`, `X-HookBridge-Signature`, etc.).
+     - Mascaramento de API Keys preservando prefixo e sufixo (`hb_live_...1234`).
+     - Mascaramento de emails (`a***n@domain.com`).
+     - Redação recursiva de propriedades sensíveis em payloads JSON (`password`, `secret`, `token`, `apiKey`, `credential`, etc.).
+     - Sanitização de credenciais embutidas em URLs (`https://user:[REDACTED]@host`) e parâmetros de busca sensíveis.
+2. **Hardening da Trilha de Auditoria (`AuditEntry`):**
+   - `AuditEntry.Create` agora sanitiza automaticamente `detailsJson` com `SensitiveDataSanitizer.SanitizeJson`.
+   - `AuditEntry.Create` infere automaticamente o `TraceId` ativo do OpenTelemetry (`Activity.Current?.TraceId`) quando nenhum ID explícito é fornecido.
+   - `ICurrentUser` e `CurrentUser` enriquecidos com `IpAddress` e `TraceId`, repassados aos use cases de auditoria.
+3. **Structured Logging & Correlação OpenTelemetry:**
+   - `TraceContextEnricherMiddleware` atualizado para criar um escopo estruturado `_logger.BeginScope(new Dictionary { ["TraceId"] = traceId, ["CorrelationId"] = correlationId })`, propagando contexto de correlação para todas as mensagens de log downstream.
+   - `TenantResolutionMiddleware` atualizado para marcar `Activity.Current` com a tag `tenant.id` (`HookBridgeDiagnostics.TagTenantId`).
+   - Implementado structured logging com geradores de código `[LoggerMessage]` (zero interpolação de strings em templates) nos principais use cases: `PublishEventUseCase`, `ReplayDeliveryUseCase`, `BulkReplayDeliveriesUseCase`, `RecordDeliveryAttemptUseCase`, `RegisterTenantUseCase`, `InviteUserUseCase`, `RotateWebhookSecretUseCase`, `RevokeApiKeyUseCase` e `EventFlowClient`.
+   - Sanitização de mensagens de erro externas e adição de logs estruturados para operações de DLQ (Peek, Replay, Purge) no `EventFlowClient`.
+   - `RecordDeliveryAttemptUseCase` agora sanitiza `RequestHeadersJson` e `ResponseHeadersJson` antes da persistência no banco.
+4. **Testes Automatizados:**
+   - Criados `tests/HookBridge.UnitTests/Observability/SensitiveDataSanitizerTests.cs` (testes exaustivos de headers, payloads JSON aninhados, URLs e emails).
+   - Criados `tests/HookBridge.UnitTests/Observability/AuditAndTelemetryHardeningTests.cs` (testes de redação em auditoria, correlação de trace ID e sanitização de headers de tentativa).
+   - Criados `tests/HookBridge.IntegrationTests/Observability/ObservabilityHardeningIntegrationTests.cs` (verificação end-to-end de propagação de `X-Trace-Id`/`X-Correlation-Id`, persistência de auditoria sem vazamento e rotação segura de segredos).
+   - 506 testes automatizados passando (407 UnitTests + 99 IntegrationTests). Build frontend Angular 21 limpo com 0 erros.
+
 
 
 

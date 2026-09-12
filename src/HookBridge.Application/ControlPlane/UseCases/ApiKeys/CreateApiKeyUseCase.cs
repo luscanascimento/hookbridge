@@ -78,7 +78,7 @@ public sealed class CreateApiKeyUseCase
             "ApiKey",
             apiKey.Id.ToString(),
             JsonSerializer.Serialize(new { apiKey.Name, apiKey.KeyPrefix, Scopes = apiKey.Scopes.ToString(), apiKey.ExpiresAt }),
-            null,
+            _currentUser.IpAddress,
             null,
             now).Value;
 

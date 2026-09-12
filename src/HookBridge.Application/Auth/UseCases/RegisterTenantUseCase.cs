@@ -5,31 +5,40 @@ using HookBridge.Application.Common;
 using HookBridge.Domain.Common;
 using HookBridge.Domain.Entities;
 using HookBridge.Domain.Enums;
+using HookBridge.Domain.Security;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HookBridge.Application.Auth.UseCases;
 
-public sealed class RegisterTenantUseCase
+public sealed partial class RegisterTenantUseCase
 {
     private readonly IHookBridgeDbContext _dbContext;
     private readonly IValidator<RegisterTenantCommand> _validator;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ITokenService _tokenService;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ILogger<RegisterTenantUseCase> _logger;
 
     public RegisterTenantUseCase(
         IHookBridgeDbContext dbContext,
         IValidator<RegisterTenantCommand> validator,
         IPasswordHasher passwordHasher,
         ITokenService tokenService,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        ILogger<RegisterTenantUseCase>? logger = null)
     {
         _dbContext = dbContext;
         _validator = validator;
         _passwordHasher = passwordHasher;
         _tokenService = tokenService;
         _dateTimeProvider = dateTimeProvider;
+        _logger = logger ?? NullLogger<RegisterTenantUseCase>.Instance;
     }
+
+    [LoggerMessage(EventId = 4030, Level = LogLevel.Information, Message = "Tenant registered successfully: TenantIdentifier={TenantIdentifier}, TenantId={TenantId}")]
+    private static partial void LogTenantRegistered(ILogger logger, string tenantIdentifier, Guid tenantId);
 
     public async Task<Result<AuthResponse>> ExecuteAsync(RegisterTenantCommand command, CancellationToken cancellationToken = default)
     {
@@ -108,7 +117,7 @@ public sealed class RegisterTenantUseCase
             "Tenant.Registered",
             "Tenant",
             tenant.Id.ToString(),
-            $"{{\"tenantIdentifier\":\"{tenant.Identifier}\",\"adminEmail\":\"{user.Email}\"}}",
+            $"{{\"tenantIdentifier\":\"{tenant.Identifier}\",\"adminEmail\":\"{SensitiveDataSanitizer.MaskEmail(user.Email)}\"}}",
             null,
             null,
             now).Value;
@@ -119,6 +128,8 @@ public sealed class RegisterTenantUseCase
         _dbContext.AuditEntries.Add(audit);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        LogTenantRegistered(_logger, tenant.Identifier, tenant.Id);
 
         var profile = new UserProfileResponse(
             user.Id,

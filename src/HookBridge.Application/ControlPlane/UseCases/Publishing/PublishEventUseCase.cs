@@ -9,10 +9,12 @@ using HookBridge.Domain.Diagnostics;
 using HookBridge.Domain.Entities;
 using HookBridge.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HookBridge.Application.ControlPlane.UseCases.Publishing;
 
-public sealed class PublishEventUseCase
+public sealed partial class PublishEventUseCase
 {
     private readonly IHookBridgeDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
@@ -21,6 +23,7 @@ public sealed class PublishEventUseCase
     private readonly IValidator<PublishEventCommand> _validator;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IDeliveryRealtimeNotifier _realtimeNotifier;
+    private readonly ILogger<PublishEventUseCase> _logger;
 
     public PublishEventUseCase(
         IHookBridgeDbContext dbContext,
@@ -29,7 +32,8 @@ public sealed class PublishEventUseCase
         IEventFlowClient eventFlowClient,
         IValidator<PublishEventCommand> validator,
         IDateTimeProvider dateTimeProvider,
-        IDeliveryRealtimeNotifier? realtimeNotifier = null)
+        IDeliveryRealtimeNotifier? realtimeNotifier = null,
+        ILogger<PublishEventUseCase>? logger = null)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
@@ -38,7 +42,14 @@ public sealed class PublishEventUseCase
         _validator = validator;
         _dateTimeProvider = dateTimeProvider;
         _realtimeNotifier = realtimeNotifier ?? NullDeliveryRealtimeNotifier.Instance;
+        _logger = logger ?? NullLogger<PublishEventUseCase>.Instance;
     }
+
+    [LoggerMessage(EventId = 4001, Level = LogLevel.Information, Message = "Event published: EventId={EventId}, EventType={EventType}, DeliveriesCount={DeliveriesCount}, CorrelationId={CorrelationId}, TenantId={TenantId}")]
+    private static partial void LogEventPublished(ILogger logger, Guid eventId, string eventType, int deliveriesCount, string correlationId, Guid tenantId);
+
+    [LoggerMessage(EventId = 4002, Level = LogLevel.Warning, Message = "Event ingestion rejected by EventFlow: EventType={EventType}, CorrelationId={CorrelationId}, TenantId={TenantId}, ErrorCode={ErrorCode}, ErrorMessage={ErrorMessage}")]
+    private static partial void LogIngestFailed(ILogger logger, string eventType, string correlationId, Guid tenantId, string errorCode, string errorMessage);
 
     public async Task<Result<PublishEventResponse>> ExecuteAsync(PublishEventCommand command, CancellationToken cancellationToken = default)
     {
@@ -56,8 +67,8 @@ public sealed class PublishEventUseCase
         }
 
         using var activity = HookBridgeDiagnostics.ActivitySource.StartActivity("HookBridge.PublishEvent");
-        activity?.SetTag("tenant.id", tenantId.ToString());
-        activity?.SetTag("event.type", command.EventType);
+        activity?.SetTag(HookBridgeDiagnostics.TagTenantId, tenantId.ToString());
+        activity?.SetTag(HookBridgeDiagnostics.TagEventType, command.EventType);
 
         var now = _dateTimeProvider.UtcNow;
         var eventId = Guid.NewGuid();
@@ -66,7 +77,7 @@ public sealed class PublishEventUseCase
         var spanId = Guid.NewGuid().ToString("N")[..16];
         var traceParent = activity?.Id ?? $"00-{Guid.NewGuid():N}-{spanId}-01";
 
-        activity?.SetTag("correlation.id", correlationId);
+        activity?.SetTag(HookBridgeDiagnostics.TagCorrelationId, correlationId);
         activity?.SetTag("idempotency.key", idempotencyKey);
 
         // 1. Find all active endpoints with matching subscriptions within this tenant
@@ -117,6 +128,7 @@ public sealed class PublishEventUseCase
         var ingestResult = await _eventFlowClient.IngestEventAsync(ingestRequest, cancellationToken);
         if (ingestResult.IsFailure)
         {
+            LogIngestFailed(_logger, command.EventType, correlationId, tenantId, ingestResult.Error.Code, ingestResult.Error.Message);
             return Result.Failure<PublishEventResponse>(ingestResult.Error);
         }
 
@@ -134,13 +146,15 @@ public sealed class PublishEventUseCase
             "Event",
             eventId.ToString(),
             JsonSerializer.Serialize(new { command.EventType, DeliveriesCount = deliveriesCreated.Count, correlationId, idempotencyKey }),
-            null,
+            _currentUser.IpAddress,
             traceParent,
             now).Value;
 
         _dbContext.AuditEntries.Add(audit);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        LogEventPublished(_logger, eventId, command.EventType, deliveriesCreated.Count, correlationId, tenantId);
 
         // Emit realtime SignalR delivery notifications
         foreach (var delivery in deliveriesCreated)

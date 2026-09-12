@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using HookBridge.Domain.Common;
+using HookBridge.Domain.Security;
 
 namespace HookBridge.Domain.Entities;
 
@@ -37,6 +39,12 @@ public sealed class AuditEntry : Entity<Guid>, ITenantScoped
             return Result.Failure<AuditEntry>(DomainError.Validation("AuditEntry.EmptyAction", "Action cannot be empty."));
         }
 
+        var resolvedTraceId = !string.IsNullOrWhiteSpace(traceId)
+            ? traceId.Trim()
+            : (Activity.Current?.TraceId.ToString() ?? Activity.Current?.Id);
+
+        var sanitizedDetails = SensitiveDataSanitizer.SanitizeJson(detailsJson);
+
         return Result.Success(new AuditEntry
         {
             Id = Guid.NewGuid(),
@@ -45,9 +53,9 @@ public sealed class AuditEntry : Entity<Guid>, ITenantScoped
             Action = action.Trim(),
             ResourceType = resourceType.Trim(),
             ResourceId = resourceId.Trim(),
-            DetailsJson = detailsJson,
+            DetailsJson = sanitizedDetails,
             IpAddress = ipAddress?.Trim(),
-            TraceId = traceId?.Trim(),
+            TraceId = resolvedTraceId,
             Timestamp = timestamp
         });
     }

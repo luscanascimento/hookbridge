@@ -10,10 +10,12 @@ using HookBridge.Domain.Diagnostics;
 using HookBridge.Domain.Entities;
 using HookBridge.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HookBridge.Application.ControlPlane.UseCases.Deliveries;
 
-public sealed class BulkReplayDeliveriesUseCase
+public sealed partial class BulkReplayDeliveriesUseCase
 {
     private readonly IHookBridgeDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
@@ -22,6 +24,7 @@ public sealed class BulkReplayDeliveriesUseCase
     private readonly IValidator<BulkReplayDeliveriesCommand> _validator;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IDeliveryRealtimeNotifier _realtimeNotifier;
+    private readonly ILogger<BulkReplayDeliveriesUseCase> _logger;
 
     public BulkReplayDeliveriesUseCase(
         IHookBridgeDbContext dbContext,
@@ -30,7 +33,8 @@ public sealed class BulkReplayDeliveriesUseCase
         IEventFlowClient eventFlowClient,
         IValidator<BulkReplayDeliveriesCommand> validator,
         IDateTimeProvider dateTimeProvider,
-        IDeliveryRealtimeNotifier? realtimeNotifier = null)
+        IDeliveryRealtimeNotifier? realtimeNotifier = null,
+        ILogger<BulkReplayDeliveriesUseCase>? logger = null)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
@@ -39,7 +43,11 @@ public sealed class BulkReplayDeliveriesUseCase
         _validator = validator;
         _dateTimeProvider = dateTimeProvider;
         _realtimeNotifier = realtimeNotifier ?? NullDeliveryRealtimeNotifier.Instance;
+        _logger = logger ?? NullLogger<BulkReplayDeliveriesUseCase>.Instance;
     }
+
+    [LoggerMessage(EventId = 4020, Level = LogLevel.Information, Message = "Bulk replay completed: ReplayedCount={ReplayedCount}, TenantId={TenantId}")]
+    private static partial void LogBulkReplayCompleted(ILogger logger, int replayedCount, Guid tenantId);
 
     public async Task<Result<BulkReplayDeliveriesResponse>> ExecuteAsync(
         BulkReplayDeliveriesCommand command,
@@ -59,7 +67,7 @@ public sealed class BulkReplayDeliveriesUseCase
         }
 
         using var activity = HookBridgeDiagnostics.ActivitySource.StartActivity("HookBridge.BulkReplayDeliveries");
-        activity?.SetTag("tenant.id", tenantId.ToString());
+        activity?.SetTag(HookBridgeDiagnostics.TagTenantId, tenantId.ToString());
 
         var maxCount = Math.Clamp(command.MaxCount ?? 50, 1, 500);
 
@@ -247,13 +255,15 @@ public sealed class BulkReplayDeliveriesUseCase
                 FilterEventType = command.EventType,
                 ExplicitIdsCount = command.DeliveryIds?.Count ?? 0
             }),
-            null,
+            _currentUser.IpAddress,
             activity?.Id,
             now).Value;
 
         _dbContext.AuditEntries.Add(audit);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        LogBulkReplayCompleted(_logger, replayedResponses.Count, tenantId);
 
         // Emit realtime SignalR bulk replay notifications
         if (newDeliveries.Count > 0)

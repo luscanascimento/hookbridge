@@ -5,28 +5,37 @@ using HookBridge.Domain.Common;
 using HookBridge.Domain.Diagnostics;
 using HookBridge.Domain.Entities;
 using HookBridge.Domain.Enums;
+using HookBridge.Domain.Security;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HookBridge.Application.ControlPlane.UseCases.Deliveries;
 
-public sealed class RecordDeliveryAttemptUseCase
+public sealed partial class RecordDeliveryAttemptUseCase
 {
     private readonly IHookBridgeDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IDeliveryRealtimeNotifier _realtimeNotifier;
+    private readonly ILogger<RecordDeliveryAttemptUseCase> _logger;
 
     public RecordDeliveryAttemptUseCase(
         IHookBridgeDbContext dbContext,
         ITenantContext tenantContext,
         IDateTimeProvider dateTimeProvider,
-        IDeliveryRealtimeNotifier? realtimeNotifier = null)
+        IDeliveryRealtimeNotifier? realtimeNotifier = null,
+        ILogger<RecordDeliveryAttemptUseCase>? logger = null)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
         _dateTimeProvider = dateTimeProvider;
         _realtimeNotifier = realtimeNotifier ?? NullDeliveryRealtimeNotifier.Instance;
+        _logger = logger ?? NullLogger<RecordDeliveryAttemptUseCase>.Instance;
     }
+
+    [LoggerMessage(EventId = 3101, Level = LogLevel.Information, Message = "Delivery attempt recorded: DeliveryId={DeliveryId}, AttemptNumber={AttemptNumber}, StatusCode={StatusCode}, ElapsedMs={ElapsedMs}, Status={Status}, TenantId={TenantId}")]
+    private static partial void LogAttemptRecorded(ILogger logger, Guid deliveryId, int attemptNumber, int? statusCode, long elapsedMs, DeliveryStatus status, Guid tenantId);
 
     public async Task<Result<AttemptResponse>> ExecuteAsync(Guid deliveryId, RecordDeliveryAttemptCommand command, CancellationToken cancellationToken = default)
     {
@@ -50,14 +59,19 @@ public sealed class RecordDeliveryAttemptUseCase
         var now = _dateTimeProvider.UtcNow;
         var attemptNumber = delivery.AttemptCount + 1;
 
+        var sanitizedReqHeaders = SensitiveDataSanitizer.SanitizeHeadersJson(command.RequestHeadersJson);
+        var sanitizedResHeaders = !string.IsNullOrWhiteSpace(command.ResponseHeadersJson)
+            ? SensitiveDataSanitizer.SanitizeHeadersJson(command.ResponseHeadersJson)
+            : null;
+
         var attemptResult = Attempt.Create(
             delivery.Id,
             tenantId,
             attemptNumber,
             command.HttpStatusCode,
-            command.RequestHeadersJson ?? "{}",
+            sanitizedReqHeaders,
             command.RequestBody ?? "{}",
-            command.ResponseHeadersJson,
+            sanitizedResHeaders,
             command.ResponseBody,
             command.ElapsedMs,
             command.ErrorMessage,
@@ -95,6 +109,8 @@ public sealed class RecordDeliveryAttemptUseCase
 
         // Emit realtime SignalR delivery attempt notification
         await _realtimeNotifier.NotifyDeliveryAttemptRecordedAsync(delivery, attempt, cancellationToken);
+
+        LogAttemptRecorded(_logger, delivery.Id, attempt.AttemptNumber, attempt.HttpStatusCode, attempt.ElapsedMs, delivery.Status, tenantId);
 
         return Result.Success(new AttemptResponse(
             attempt.Id,

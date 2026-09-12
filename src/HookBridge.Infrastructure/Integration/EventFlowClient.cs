@@ -4,6 +4,7 @@ using System.Text.Json;
 using HookBridge.Application.Abstractions;
 using HookBridge.Application.Integration.DTOs;
 using HookBridge.Domain.Common;
+using HookBridge.Domain.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -42,6 +43,18 @@ public sealed partial class EventFlowClient : IEventFlowClient
     [LoggerMessage(EventId = 2003, Level = LogLevel.Error, Message = "EventFlow Ingestion request threw exception.")]
     private static partial void LogEventIngestException(ILogger logger, Exception ex);
 
+    [LoggerMessage(EventId = 2004, Level = LogLevel.Information, Message = "DLQ messages peeked: Count={Count}")]
+    private static partial void LogDlqPeeked(ILogger logger, int count);
+
+    [LoggerMessage(EventId = 2005, Level = LogLevel.Information, Message = "DLQ messages replayed: ReplayedCount={ReplayedCount}")]
+    private static partial void LogDlqReplayed(ILogger logger, int replayedCount);
+
+    [LoggerMessage(EventId = 2006, Level = LogLevel.Information, Message = "DLQ messages purged: PurgedCount={PurgedCount}")]
+    private static partial void LogDlqPurged(ILogger logger, int purgedCount);
+
+    [LoggerMessage(EventId = 2007, Level = LogLevel.Warning, Message = "DLQ operation {Operation} failed: {Error}")]
+    private static partial void LogDlqOperationFailed(ILogger logger, string operation, string error);
+
     public async Task<Result<EventFlowIngestResponse>> IngestEventAsync(EventFlowIngestRequest request, CancellationToken cancellationToken = default)
     {
         try
@@ -65,7 +78,8 @@ public sealed partial class EventFlowClient : IEventFlowClient
             }
 
             var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            LogEventIngestFailed(_logger, (int)response.StatusCode, errorBody);
+            var sanitizedErrorBody = SensitiveDataSanitizer.SanitizeJson(errorBody);
+            LogEventIngestFailed(_logger, (int)response.StatusCode, sanitizedErrorBody);
 
             if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
             {
@@ -102,10 +116,13 @@ public sealed partial class EventFlowClient : IEventFlowClient
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<DlqPeekResponseInternal>(JsonOpts, cancellationToken);
-                return Result.Success<IReadOnlyList<DeadLetterMessageDto>>(result?.Messages ?? Array.Empty<DeadLetterMessageDto>());
+                var messages = result?.Messages ?? Array.Empty<DeadLetterMessageDto>();
+                LogDlqPeeked(_logger, messages.Count);
+                return Result.Success<IReadOnlyList<DeadLetterMessageDto>>(messages);
             }
 
             var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            LogDlqOperationFailed(_logger, "Peek", error);
             return Result.Failure<IReadOnlyList<DeadLetterMessageDto>>(DomainError.Failure(
                 "EventFlow.DlqPeekFailed",
                 $"Failed to peek DLQ: {error}"));
@@ -116,6 +133,7 @@ public sealed partial class EventFlowClient : IEventFlowClient
         }
         catch (Exception ex)
         {
+            LogDlqOperationFailed(_logger, "Peek", ex.Message);
             return Result.Failure<IReadOnlyList<DeadLetterMessageDto>>(DomainError.Failure(
                 "EventFlow.ConnectionError",
                 $"Could not reach EventFlow DLQ at '{_options.BaseUrl}': {ex.Message}"));
@@ -133,10 +151,13 @@ public sealed partial class EventFlowClient : IEventFlowClient
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<DlqReplayResponseInternal>(JsonOpts, cancellationToken);
-                return Result.Success(result?.ReplayedCount ?? 0);
+                var replayed = result?.ReplayedCount ?? 0;
+                LogDlqReplayed(_logger, replayed);
+                return Result.Success(replayed);
             }
 
             var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            LogDlqOperationFailed(_logger, "Replay", error);
             return Result.Failure<int>(DomainError.Failure(
                 "EventFlow.DlqReplayFailed",
                 $"Failed to replay DLQ: {error}"));
@@ -147,6 +168,7 @@ public sealed partial class EventFlowClient : IEventFlowClient
         }
         catch (Exception ex)
         {
+            LogDlqOperationFailed(_logger, "Replay", ex.Message);
             return Result.Failure<int>(DomainError.Failure(
                 "EventFlow.ConnectionError",
                 $"Could not reach EventFlow DLQ at '{_options.BaseUrl}': {ex.Message}"));
@@ -164,10 +186,13 @@ public sealed partial class EventFlowClient : IEventFlowClient
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<DlqPurgeResponseInternal>(JsonOpts, cancellationToken);
-                return Result.Success(result?.PurgedCount ?? 0);
+                var purged = result?.PurgedCount ?? 0;
+                LogDlqPurged(_logger, purged);
+                return Result.Success(purged);
             }
 
             var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            LogDlqOperationFailed(_logger, "Purge", error);
             return Result.Failure<int>(DomainError.Failure(
                 "EventFlow.DlqPurgeFailed",
                 $"Failed to purge DLQ: {error}"));
@@ -178,6 +203,7 @@ public sealed partial class EventFlowClient : IEventFlowClient
         }
         catch (Exception ex)
         {
+            LogDlqOperationFailed(_logger, "Purge", ex.Message);
             return Result.Failure<int>(DomainError.Failure(
                 "EventFlow.ConnectionError",
                 $"Could not reach EventFlow DLQ at '{_options.BaseUrl}': {ex.Message}"));

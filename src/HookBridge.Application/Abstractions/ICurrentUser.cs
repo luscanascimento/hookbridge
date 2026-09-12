@@ -11,4 +11,6 @@ public interface ICurrentUser
     string? Email { get; }
     UserRole? Role { get; }
     bool IsAuthenticated { get; }
+    string? IpAddress => null;
+    string? TraceId => null;
 }

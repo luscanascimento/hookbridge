@@ -6,10 +6,12 @@ namespace HookBridge.Api.Middleware;
 public sealed class TraceContextEnricherMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<TraceContextEnricherMiddleware> _logger;
 
-    public TraceContextEnricherMiddleware(RequestDelegate next)
+    public TraceContextEnricherMiddleware(RequestDelegate next, ILogger<TraceContextEnricherMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -48,6 +50,15 @@ public sealed class TraceContextEnricherMiddleware
             return Task.CompletedTask;
         });
 
-        await _next(context);
+        var scopeState = new Dictionary<string, object>
+        {
+            ["TraceId"] = traceId,
+            ["CorrelationId"] = correlationId
+        };
+
+        using (_logger.BeginScope(scopeState))
+        {
+            await _next(context);
+        }
     }
 }

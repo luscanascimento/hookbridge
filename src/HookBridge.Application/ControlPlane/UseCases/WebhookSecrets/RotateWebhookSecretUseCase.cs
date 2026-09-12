@@ -5,10 +5,12 @@ using HookBridge.Domain.Common;
 using HookBridge.Domain.Entities;
 using HookBridge.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HookBridge.Application.ControlPlane.UseCases.WebhookSecrets;
 
-public sealed class RotateWebhookSecretUseCase
+public sealed partial class RotateWebhookSecretUseCase
 {
     private readonly IHookBridgeDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
@@ -16,6 +18,7 @@ public sealed class RotateWebhookSecretUseCase
     private readonly IApiKeyGenerator _keyGenerator;
     private readonly ISecretEncryptor _secretEncryptor;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ILogger<RotateWebhookSecretUseCase> _logger;
 
     public RotateWebhookSecretUseCase(
         IHookBridgeDbContext dbContext,
@@ -23,7 +26,8 @@ public sealed class RotateWebhookSecretUseCase
         ICurrentUser currentUser,
         IApiKeyGenerator keyGenerator,
         ISecretEncryptor secretEncryptor,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        ILogger<RotateWebhookSecretUseCase>? logger = null)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
@@ -31,7 +35,11 @@ public sealed class RotateWebhookSecretUseCase
         _keyGenerator = keyGenerator;
         _secretEncryptor = secretEncryptor;
         _dateTimeProvider = dateTimeProvider;
+        _logger = logger ?? NullLogger<RotateWebhookSecretUseCase>.Instance;
     }
+
+    [LoggerMessage(EventId = 4040, Level = LogLevel.Information, Message = "Webhook secret rotated: EndpointId={EndpointId}, Version={Version}, Prefix={Prefix}, TenantId={TenantId}")]
+    private static partial void LogSecretRotated(ILogger logger, Guid endpointId, int version, string prefix, Guid tenantId);
 
     public async Task<Result<RotateSecretResponse>> ExecuteAsync(Guid endpointId, CancellationToken cancellationToken = default)
     {
@@ -94,7 +102,7 @@ public sealed class RotateWebhookSecretUseCase
             "WebhookSecret",
             newSecret.Id.ToString(),
             JsonSerializer.Serialize(new { EndpointId = endpointId, Version = nextVersion, Prefix = secretPrefix }),
-            null,
+            _currentUser.IpAddress,
             null,
             now).Value;
 
@@ -102,6 +110,8 @@ public sealed class RotateWebhookSecretUseCase
         _dbContext.AuditEntries.Add(audit);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        LogSecretRotated(_logger, endpointId, nextVersion, secretPrefix, tenantId);
 
         return Result.Success(new RotateSecretResponse(
             newSecret.Id,

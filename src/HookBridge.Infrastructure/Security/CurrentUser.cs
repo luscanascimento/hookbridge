@@ -9,4 +9,6 @@ public sealed class CurrentUser : ICurrentUser
     public string? Email { get; set; }
     public UserRole? Role { get; set; }
     public bool IsAuthenticated => UserId.HasValue;
+    public string? IpAddress { get; set; }
+    public string? TraceId { get; set; }
 }

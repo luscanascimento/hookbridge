@@ -5,11 +5,14 @@ using HookBridge.Application.Common;
 using HookBridge.Domain.Common;
 using HookBridge.Domain.Entities;
 using HookBridge.Domain.Enums;
+using HookBridge.Domain.Security;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HookBridge.Application.Auth.UseCases;
 
-public sealed class InviteUserUseCase
+public sealed partial class InviteUserUseCase
 {
     private readonly IHookBridgeDbContext _dbContext;
     private readonly IValidator<InviteUserCommand> _validator;
@@ -17,6 +20,7 @@ public sealed class InviteUserUseCase
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUser _currentUser;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ILogger<InviteUserUseCase> _logger;
 
     public InviteUserUseCase(
         IHookBridgeDbContext dbContext,
@@ -24,7 +28,8 @@ public sealed class InviteUserUseCase
         IPasswordHasher passwordHasher,
         ITenantContext tenantContext,
         ICurrentUser currentUser,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        ILogger<InviteUserUseCase>? logger = null)
     {
         _dbContext = dbContext;
         _validator = validator;
@@ -32,7 +37,11 @@ public sealed class InviteUserUseCase
         _tenantContext = tenantContext;
         _currentUser = currentUser;
         _dateTimeProvider = dateTimeProvider;
+        _logger = logger ?? NullLogger<InviteUserUseCase>.Instance;
     }
+
+    [LoggerMessage(EventId = 4031, Level = LogLevel.Information, Message = "User invited: TenantId={TenantId}, Role={Role}, MaskedEmail={MaskedEmail}")]
+    private static partial void LogUserInvited(ILogger logger, Guid tenantId, UserRole role, string maskedEmail);
 
     public async Task<Result<UserProfileResponse>> ExecuteAsync(InviteUserCommand command, CancellationToken cancellationToken = default)
     {
@@ -74,14 +83,15 @@ public sealed class InviteUserUseCase
         var user = userResult.Value;
 
         // 3. Create Audit Entry
+        var maskedEmail = SensitiveDataSanitizer.MaskEmail(user.Email);
         var audit = AuditEntry.Create(
             tenantId,
             _currentUser.UserId,
             "User.Invited",
             "User",
             user.Id.ToString(),
-            $"{{\"invitedEmail\":\"{user.Email}\",\"role\":\"{user.Role}\"}}",
-            null,
+            $"{{\"invitedEmail\":\"{maskedEmail}\",\"role\":\"{user.Role}\"}}",
+            _currentUser.IpAddress,
             null,
             now).Value;
 
@@ -89,6 +99,8 @@ public sealed class InviteUserUseCase
         _dbContext.AuditEntries.Add(audit);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        LogUserInvited(_logger, tenantId, user.Role, maskedEmail);
 
         var tenant = await _dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
 

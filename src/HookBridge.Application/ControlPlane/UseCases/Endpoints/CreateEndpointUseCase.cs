@@ -139,7 +139,7 @@ public sealed class CreateEndpointUseCase
             "Endpoint",
             endpoint.Id.ToString(),
             JsonSerializer.Serialize(new { endpoint.TargetUrl, endpoint.ApplicationId, endpoint.RateLimitPerMinute, endpoint.TimeoutSeconds }),
-            null,
+            _currentUser.IpAddress,
             null,
             now).Value;
 

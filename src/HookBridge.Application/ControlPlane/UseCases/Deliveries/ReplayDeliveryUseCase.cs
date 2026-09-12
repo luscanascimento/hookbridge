@@ -10,10 +10,12 @@ using HookBridge.Domain.Diagnostics;
 using HookBridge.Domain.Entities;
 using HookBridge.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HookBridge.Application.ControlPlane.UseCases.Deliveries;
 
-public sealed class ReplayDeliveryUseCase
+public sealed partial class ReplayDeliveryUseCase
 {
     private readonly IHookBridgeDbContext _dbContext;
     private readonly ITenantContext _tenantContext;
@@ -22,6 +24,7 @@ public sealed class ReplayDeliveryUseCase
     private readonly IValidator<ReplayDeliveryCommand> _validator;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IDeliveryRealtimeNotifier _realtimeNotifier;
+    private readonly ILogger<ReplayDeliveryUseCase> _logger;
 
     public ReplayDeliveryUseCase(
         IHookBridgeDbContext dbContext,
@@ -30,7 +33,8 @@ public sealed class ReplayDeliveryUseCase
         IEventFlowClient eventFlowClient,
         IValidator<ReplayDeliveryCommand> validator,
         IDateTimeProvider dateTimeProvider,
-        IDeliveryRealtimeNotifier? realtimeNotifier = null)
+        IDeliveryRealtimeNotifier? realtimeNotifier = null,
+        ILogger<ReplayDeliveryUseCase>? logger = null)
     {
         _dbContext = dbContext;
         _tenantContext = tenantContext;
@@ -39,7 +43,14 @@ public sealed class ReplayDeliveryUseCase
         _validator = validator;
         _dateTimeProvider = dateTimeProvider;
         _realtimeNotifier = realtimeNotifier ?? NullDeliveryRealtimeNotifier.Instance;
+        _logger = logger ?? NullLogger<ReplayDeliveryUseCase>.Instance;
     }
+
+    [LoggerMessage(EventId = 4010, Level = LogLevel.Information, Message = "Delivery replayed: OriginalDeliveryId={OriginalDeliveryId}, NewDeliveryId={NewDeliveryId}, EndpointId={EndpointId}, TenantId={TenantId}")]
+    private static partial void LogDeliveryReplayed(ILogger logger, Guid originalDeliveryId, Guid newDeliveryId, Guid endpointId, Guid tenantId);
+
+    [LoggerMessage(EventId = 4011, Level = LogLevel.Warning, Message = "Delivery replay failed: DeliveryId={DeliveryId}, TenantId={TenantId}, ErrorCode={ErrorCode}, ErrorMessage={ErrorMessage}")]
+    private static partial void LogReplayFailed(ILogger logger, Guid deliveryId, Guid tenantId, string errorCode, string errorMessage);
 
     public async Task<Result<ReplayDeliveryResponse>> ExecuteAsync(
         Guid deliveryId,
@@ -63,14 +74,15 @@ public sealed class ReplayDeliveryUseCase
         }
 
         using var activity = HookBridgeDiagnostics.ActivitySource.StartActivity("HookBridge.ReplayDelivery");
-        activity?.SetTag("tenant.id", tenantId.ToString());
-        activity?.SetTag("original_delivery.id", deliveryId.ToString());
+        activity?.SetTag(HookBridgeDiagnostics.TagTenantId, tenantId.ToString());
+        activity?.SetTag(HookBridgeDiagnostics.TagDeliveryId, deliveryId.ToString());
 
         var originalDelivery = await _dbContext.Deliveries
             .FirstOrDefaultAsync(d => d.Id == deliveryId && d.TenantId == tenantId, cancellationToken);
 
         if (originalDelivery is null)
         {
+            LogReplayFailed(_logger, deliveryId, tenantId, "Delivery.NotFound", $"Delivery with ID '{deliveryId}' was not found.");
             return Result.Failure<ReplayDeliveryResponse>(DomainError.NotFound(
                 "Delivery.NotFound",
                 $"Delivery with ID '{deliveryId}' was not found."));
@@ -170,6 +182,7 @@ public sealed class ReplayDeliveryUseCase
         var ingestResult = await _eventFlowClient.IngestEventAsync(ingestRequest, cancellationToken);
         if (ingestResult.IsFailure)
         {
+            LogReplayFailed(_logger, deliveryId, tenantId, ingestResult.Error.Code, ingestResult.Error.Message);
             return Result.Failure<ReplayDeliveryResponse>(ingestResult.Error);
         }
 
@@ -190,13 +203,15 @@ public sealed class ReplayDeliveryUseCase
                 EventType = originalDelivery.EventType,
                 OverrideEndpoint = command?.OverrideEndpointId.HasValue == true
             }),
-            null,
+            _currentUser.IpAddress,
             traceParent,
             now).Value;
 
         _dbContext.AuditEntries.Add(audit);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        LogDeliveryReplayed(_logger, originalDelivery.Id, newDelivery.Id, endpoint.Id, tenantId);
 
         // Emit realtime SignalR delivery replayed notification
         await _realtimeNotifier.NotifyDeliveryReplayedAsync(newDelivery, originalDelivery.Id, cancellationToken);
