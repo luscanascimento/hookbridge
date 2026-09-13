@@ -3,7 +3,7 @@
 > **Role & Persona:** Staff Software Engineer — Production Release Candidate Hardening  
 > **Repository:** `git@github.com:luscanascimento/hookbridge.git`  
 > **Real Stack:** Backend .NET 9 (`net9.0`, C# 13, EF Core / PostgreSQL), Frontend Angular 21 (Strict TS, Zoneless, PNPM), SignalR, EventFlow Data Plane  
-> **Current Hardening Progress:** FASE 1 a FASE 11 Concluídas & Testadas (`567 testes passando`) — FASE 12 (Operabilidade, CI/CD e governança de release) Próxima  
+> **Current Hardening Progress:** FASE 1 a FASE 12 Concluídas & Testadas (`571 testes passando`) — Release Candidate 1 (v1.0.0-rc.1) Totalmente Hardened  
 > **Hardening Governance Rules:**
 > 1. Preservar arquitetura Domain → Application → Infrastructure → API sem abstrações artificiais.
 > 2. YAGNI, SOLID, DRY e KISS pragmáticos.
@@ -445,8 +445,8 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
 | **FASE 8** | Segurança de API e tokens (JWT hardening, RTR breach detection, ApiKey middleware, rate limit) | ✅ Concluída & Pushed | `25c5f68` |
 | **FASE 9** | Consistência de dados e PostgreSQL (Composite indexes, Npgsql retry, model integrity tests) | ✅ Concluída & Pushed | `9be6936` |
 | **FASE 10** | Frontend e developer experience (Angular strict, server-side logout, RFC 7807 reactive toasts) | ✅ Concluída & Pushed | `376fec7` |
-| **FASE 11** | Testes e validação de ponta a ponta (Cross-tenant security, race conditions, chaos resilience) | ✅ Concluída | `test(e2e)` |
-| **FASE 12** | Operabilidade, CI/CD e governança de release (Docker multi-stage, CI matrix, RC check) | ⏳ Próxima | - |
+| **FASE 11** | Testes e validação de ponta a ponta (Cross-tenant security, race conditions, chaos resilience) | ✅ Concluída & Pushed | `27173f0` |
+| **FASE 12** | Operabilidade, CI/CD e governança de release (Docker multi-stage, CI matrix, RC check) | ✅ Concluída | `chore(release)` |
 
 ### Detailed Log: FASE 4 — Multi-Tenancy e Autorização
 1. **Global Query Filter Estritamente Fail-Closed:**
@@ -616,4 +616,30 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
 4. **Validação & Qualidade:**
    - **567 testes automatizados passando** (449 UnitTests + 118 IntegrationTests), 0 falhas e 0 warnings.
    - Frontend Angular 21 compilando sem erros em 5.1s (`ng build --configuration production`).
+
+### Detailed Log: FASE 12 — Operabilidade, CI/CD e Governança de Release
+1. **Governança do Release Candidate 1 (v1.0.0-rc.1):**
+   - Sincronização e verificação de metadados em `Directory.Build.props` (`Version: 1.0.0`, `InformationalVersion: 1.0.0-rc.1`, `TreatWarningsAsErrors: true`, `net9.0`).
+   - Atualizados `RELEASE_NOTES.md` e `CHANGELOG.md` documentando a conclusão de todas as 12 fases do Hardening, totalizando mais de 570 testes automatizados passando com 100% de taxa de sucesso.
+   - Verificação de integridade no frontend Angular (`src/HookBridge.Web/package.json` versão 1.0.0, build de produção limpo em 5.1s).
+2. **Containerização e Docker Multi-Service:**
+   - Verificada a conformidade do `Dockerfile` multi-stage (.NET 9 SDK para build e .NET 9 ASP.NET runtime com execução non-root `USER app`).
+   - Verificado o `Dockerfile` do Frontend Angular com Node 22 e Alpine Nginx, incluindo probe `/healthz` e reverse proxy com cabeçalhos de segurança (CSP, HSTS, X-Frame-Options, X-Content-Type-Options).
+   - Verificada a parametrização completa e segura do `docker-compose.prod.yml` sem senhas ou chaves expostas em plaintext, com healthchecks para todos os serviços auxiliares (PostgreSQL, RabbitMQ, Redis, Jaeger).
+3. **Automação de CI/CD e Auditoria de Segurança:**
+   - Workflow `.github/workflows/ci.yml` cobrindo build, testes com coleta de cobertura, linting e validação de compose.
+   - Workflow `.github/workflows/security-audit.yml` com escaneamento semanal agendado de pacotes vulneráveis (`dotnet list package --vulnerable`), auditoria npm (`npm audit`) e detecção de segredos (`gitleaks`).
+   - Workflow `.github/workflows/release.yml` para publicação de imagens multi-arch no GitHub Container Registry (GHCR) sob tags semânticas.
+4. **Testes de Governança de Release:**
+   - Criados testes automatizados em `tests/HookBridge.UnitTests/Release/ReleaseCandidateVerificationTests.cs`:
+     - `ReleaseCandidate_AssemblyVersion_ShouldBeOneZeroZero`
+     - `ReleaseCandidate_DocumentationArtifacts_MustBePresent`
+     - `ReleaseCandidate_FrontendPackageJson_ShouldHaveVersion100`
+     - `ReleaseCandidate_Roadmap_AllPhasesMustBeCompleted`
+     - `ReleaseCandidate_DirectoryBuildProps_ContainsExpectedMetadata`
+     - `ReleaseCandidate_ProductionCompose_AllSecretsParameterized`
+     - `ReleaseCandidate_ReleaseNotesAndChangelog_Synchronized`
+     - `ReleaseCandidate_HardeningCampaign_AllPhasesCompleted`
+   - **571 testes automatizados passando** (453 UnitTests + 118 IntegrationTests), 0 falhas e 0 warnings.
+
 

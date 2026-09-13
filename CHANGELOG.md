@@ -53,5 +53,14 @@ All notable changes to HookBridge are documented in this file in accordance with
   - Security audit workflow scanning vulnerable dependencies and secret leaks.
   - Release workflow publishing multi-arch images to GitHub Container Registry (GHCR).
 
-### Security
-- Comprehensive IDOR, SSRF, XSS, and replay attack test suites with 100% pass rate.
+### Security & Hardening
+- Comprehensive IDOR, SSRF, XSS, and replay attack test suites with 100% pass rate across 567+ tests.
+- Hardened JWT algorithm validation strictly enforcing HMAC-SHA256 and rejecting algorithm confusion attacks.
+- Cryptographic refresh token rotation (RTR) with malicious reuse detection and user session family revocation.
+- Fail-closed multi-tenancy query filter with zero header trust across all API routes and SignalR channels.
+- Advanced SSRF defense guard against alternative IP notations (decimal, hex, octal), redirects, and DNS rebinding.
+- Polly v8 resilience pipeline with Jitter backoff, Retry-After support, and metric-instrumented circuit breaking.
+- RFC 7807 ProblemDetails error handling guaranteeing zero stack trace or internal message leakage in Production.
+- Sensitive data and PII sanitization in structured logs, distributed trace contexts, and audit ledger entries.
+- PostgreSQL resilience hardening with Npgsql connection retry on failure and composite indexes on delivery queries.
+- High-concurrency race condition verification for token refreshes, secret rotations, and webhook replays.

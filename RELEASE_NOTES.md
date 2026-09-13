@@ -23,7 +23,7 @@ We are thrilled to announce **HookBridge Release Candidate 1 (v1.0.0-rc.1)** —
    - W3C TraceContext distributed tracing propagation with OpenTelemetry.
 
 4. **Production Quality & Governance:**
-   - Over 425 automated unit, integration, chaos, and security tests with 100% pass rate.
+   - Over 565+ automated unit, integration, chaos, and security tests with 100% pass rate.
    - Multi-role engineering sign-off from Staff Software Engineer, Security, SRE, and Product Design leads.
 
 ---

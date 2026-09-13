@@ -44,3 +44,23 @@
 | **FASE 30** | **Multi-Role Engineering Review (Staff, Security, SRE, Product)** | ✅ **DONE** | `refactor: finalize engineering review` |
 | **FASE 31** | **Release Candidate & Production Verification** | ✅ **DONE** | `chore: prepare release candidate` |
 
+---
+
+## Production Release Candidate Hardening Campaign
+
+| Hardening Phase | Description | Status | Commit / Artifact |
+| :--- | :--- | :---: | :--- |
+| **FASE 1** | **Diagnóstico e Baseline** (Stack alignment & vulnerability audit) | ✅ **DONE** | Baseline Audit |
+| **FASE 2** | **Configuração e Secrets** (Fail-fast options & sanitized configs) | ✅ **DONE** | `1922bc9` |
+| **FASE 3** | **Banco de Dados e Persistência** (Versioned EF migrations & indexes) | ✅ **DONE** | `cfae65a` |
+| **FASE 4** | **Multi-Tenancy e Autorização** (Fail-closed query filter & zero header trust) | ✅ **DONE** | `7deb6ad` |
+| **FASE 5** | **Tratamento de Erros e Validação** (RFC 7807 & zero stack trace leakage) | ✅ **DONE** | `ac6a131` |
+| **FASE 6** | **Logging, Auditoria e Observabilidade** (PII sanitization & audit traces) | ✅ **DONE** | `8c4f2bb` |
+| **FASE 7** | **Resiliência e Chamadas Externas** (Polly v8, timeout, circuit breaker & SSRF defense) | ✅ **DONE** | `03fc883` |
+| **FASE 8** | **Segurança de API e Tokens** (JWT hardening, RTR breach detection, API key middleware & rate limit) | ✅ **DONE** | `25c5f68` |
+| **FASE 9** | **Consistência de Dados e PostgreSQL** (Composite indexes, Npgsql retry & model integrity) | ✅ **DONE** | `9be6936` |
+| **FASE 10** | **Frontend e Developer Experience** (Angular strict, server-side logout & reactive toasts) | ✅ **DONE** | `376fec7` |
+| **FASE 11** | **Testes e Validação de Ponta a Ponta** (Cross-tenant security, race conditions & chaos resilience) | ✅ **DONE** | `27173f0` |
+| **FASE 12** | **Operabilidade, CI/CD e Governança de Release** (Docker multi-stage, CI matrix & RC check) | ✅ **DONE** | `chore(release)` |
+
+
