@@ -28,6 +28,7 @@ internal static class AuthenticationExtensions
             {
                 var jwt = jwtOpts.Value;
                 var jwtKey = configuration["Jwt:Key"] 
+                    ?? configuration["Jwt:SecretKey"]
                     ?? throw new InvalidOperationException(
                         "JWT signing key is not configured. Set 'Jwt:Key' in appsettings or environment variables.");
                 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));

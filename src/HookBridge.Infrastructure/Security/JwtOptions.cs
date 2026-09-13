@@ -16,6 +16,12 @@ public sealed class JwtOptions
     [MinLength(32, ErrorMessage = "Jwt:Key must be at least 32 characters (256 bits) long.")]
     public string Key { get; set; } = string.Empty;
 
+    public string SecretKey
+    {
+        get => Key;
+        set => Key = value;
+    }
+
     [Range(1, 1440, ErrorMessage = "Jwt:AccessTokenExpirationMinutes must be between 1 and 1440 minutes.")]
     public int AccessTokenExpirationMinutes { get; set; } = 15;
 

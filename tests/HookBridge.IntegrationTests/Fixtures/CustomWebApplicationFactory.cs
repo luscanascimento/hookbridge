@@ -1,7 +1,9 @@
+using System.Data.Common;
 using HookBridge.Application.Abstractions;
 using HookBridge.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +12,13 @@ namespace HookBridge.IntegrationTests.Fixtures;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    public required string ConnectionString { get; init; }
+    private DbConnection? _sqliteConnection;
+
+    /// <summary>
+    /// Optional PostgreSQL connection string (e.g. from Testcontainers or external PostgreSQL instance).
+    /// When empty or null, SQLite in-memory database is used for fast local execution without Docker dependency.
+    /// </summary>
+    public string? ConnectionString { get; init; }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -19,8 +27,11 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             var testConfig = new Dictionary<string, string?>
             {
                 ["ASPNETCORE_ENVIRONMENT"] = "Testing",
-                ["ConnectionStrings:DefaultConnection"] = ConnectionString,
+                ["ConnectionStrings:DefaultConnection"] = !string.IsNullOrWhiteSpace(ConnectionString)
+                    ? ConnectionString
+                    : "DataSource=:memory:",
                 ["Jwt:Key"] = "Super_Secret_Test_Jwt_Key_Must_Be_At_Least_256_Bits_Long_2026!",
+                ["Jwt:SecretKey"] = "Super_Secret_Test_Jwt_Key_Must_Be_At_Least_256_Bits_Long_2026!",
                 ["Jwt:Issuer"] = "HookBridge.ControlPlane",
                 ["Jwt:Audience"] = "HookBridge.DeveloperPortal",
                 ["Jwt:AccessTokenExpirationMinutes"] = "15",
@@ -54,10 +65,23 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 services.Remove(d);
             }
 
-            services.AddDbContext<HookBridgeDbContext>(options =>
+            if (!string.IsNullOrWhiteSpace(ConnectionString))
             {
-                options.UseNpgsql(ConnectionString);
-            });
+                services.AddDbContext<HookBridgeDbContext>(options =>
+                {
+                    options.UseNpgsql(ConnectionString);
+                });
+            }
+            else
+            {
+                _sqliteConnection = new SqliteConnection("DataSource=:memory:");
+                _sqliteConnection.Open();
+
+                services.AddDbContext<HookBridgeDbContext>(options =>
+                {
+                    options.UseSqlite(_sqliteConnection);
+                });
+            }
 
             services.AddScoped<IHookBridgeDbContext>(sp => sp.GetRequiredService<HookBridgeDbContext>());
 
@@ -85,10 +109,11 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     {
         try
         {
-            // Clean the database between test classes for isolation
-            using var scope = Services.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<HookBridgeDbContext>();
-            await dbContext.Database.EnsureDeletedAsync();
+            if (_sqliteConnection != null)
+            {
+                await _sqliteConnection.DisposeAsync();
+                _sqliteConnection = null;
+            }
         }
         catch { }
 

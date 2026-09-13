@@ -45,11 +45,11 @@ public static class AuthEndpoints
             var result = await useCase.ExecuteAsync(command, cancellationToken);
             if (!result.IsSuccess) return HttpResults.ToProblem(result.Error);
             SetAuthCookies(httpContext, result.Value);
-            return Results.Created(string.Empty, new AuthCookieResponse(result.Value.User, "Registration successful"));
+            return Results.Created($"/api/v1/users/{result.Value.User.UserId}", result.Value);
         })
         .WithName("RegisterTenant")
         .WithSummary("Registers a new tenant organization and provisions the initial TenantAdmin user.")
-        .Produces<AuthCookieResponse>(StatusCodes.Status201Created)
+        .Produces<AuthResponse>(StatusCodes.Status201Created)
         .Produces<ProblemDetails>(StatusCodes.Status400BadRequest)
         .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
 
@@ -63,11 +63,11 @@ public static class AuthEndpoints
             var result = await useCase.ExecuteAsync(command, cancellationToken);
             if (!result.IsSuccess) return HttpResults.ToProblem(result.Error);
             SetAuthCookies(httpContext, result.Value);
-            return Results.Ok(new AuthCookieResponse(result.Value.User, "Login successful"));
+            return Results.Ok(result.Value);
         })
         .WithName("Login")
         .WithSummary("Authenticates user credentials and returns JWT access and refresh tokens.")
-        .Produces<AuthCookieResponse>(StatusCodes.Status200OK)
+        .Produces<AuthResponse>(StatusCodes.Status200OK)
         .Produces<ProblemDetails>(StatusCodes.Status401Unauthorized)
         .Produces<ProblemDetails>(StatusCodes.Status403Forbidden);
 
@@ -94,11 +94,11 @@ public static class AuthEndpoints
             var result = await useCase.ExecuteAsync(new RefreshTokenCommand(refreshToken), cancellationToken);
             if (!result.IsSuccess) return HttpResults.ToProblem(result.Error);
             SetAuthCookies(httpContext, result.Value);
-            return Results.Ok(new AuthCookieResponse(result.Value.User, "Token refreshed successfully"));
+            return Results.Ok(result.Value);
         })
         .WithName("RefreshToken")
         .WithSummary("Rotates the active refresh token and returns a fresh JWT access and refresh token pair.")
-        .Produces<AuthCookieResponse>(StatusCodes.Status200OK)
+        .Produces<AuthResponse>(StatusCodes.Status200OK)
         .Produces<ProblemDetails>(StatusCodes.Status401Unauthorized);
 
         // 4. Logout & Revoke Session
