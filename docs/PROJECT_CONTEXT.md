@@ -3,7 +3,7 @@
 > **Role & Persona:** Staff Software Engineer — Production Release Candidate Hardening  
 > **Repository:** `git@github.com:luscanascimento/hookbridge.git`  
 > **Real Stack:** Backend .NET 9 (`net9.0`, C# 13, EF Core / PostgreSQL), Frontend Angular 21 (Strict TS, Zoneless, PNPM), SignalR, EventFlow Data Plane  
-> **Current Hardening Progress:** FASE 1 a FASE 6 Concluídas & Testadas (`506 testes passando`) — FASE 7 (Resiliência e chamadas externas) Próxima  
+> **Current Hardening Progress:** FASE 1 a FASE 11 Concluídas & Testadas (`567 testes passando`) — FASE 12 (Operabilidade, CI/CD e governança de release) Próxima  
 > **Hardening Governance Rules:**
 > 1. Preservar arquitetura Domain → Application → Infrastructure → API sem abstrações artificiais.
 > 2. YAGNI, SOLID, DRY e KISS pragmáticos.
@@ -444,9 +444,9 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
 | **FASE 7** | Resiliência e chamadas externas (Polly v8, timeout, circuit breaker, SSRF defense) | ✅ Concluída & Pushed | `03fc883` |
 | **FASE 8** | Segurança de API e tokens (JWT hardening, RTR breach detection, ApiKey middleware, rate limit) | ✅ Concluída & Pushed | `25c5f68` |
 | **FASE 9** | Consistência de dados e PostgreSQL (Composite indexes, Npgsql retry, model integrity tests) | ✅ Concluída & Pushed | `9be6936` |
-| **FASE 10** | Frontend e developer experience (Angular strict, server-side logout, RFC 7807 reactive toasts) | ✅ Concluída & Pushed | `feat(frontend)` |
-| **FASE 11** | Testes e validação de ponta a ponta (Cross-tenant security, race conditions, chaos resilience) | ⏳ Próxima (Amanhã) | - |
-| **FASE 12** | Operabilidade, CI/CD e governança de release (Docker multi-stage, CI matrix, RC check) | ⏳ Planejada | - |
+| **FASE 10** | Frontend e developer experience (Angular strict, server-side logout, RFC 7807 reactive toasts) | ✅ Concluída & Pushed | `376fec7` |
+| **FASE 11** | Testes e validação de ponta a ponta (Cross-tenant security, race conditions, chaos resilience) | ✅ Concluída | `test(e2e)` |
+| **FASE 12** | Operabilidade, CI/CD e governança de release (Docker multi-stage, CI matrix, RC check) | ⏳ Próxima | - |
 
 ### Detailed Log: FASE 4 — Multi-Tenancy e Autorização
 1. **Global Query Filter Estritamente Fail-Closed:**
@@ -593,3 +593,27 @@ A rigorous 12-phase hardening campaign preparing the repository for a resilient,
    - `tsc --noEmit` executado com 0 erros de tipagem.
    - `ng build --configuration production` gerando bundle em 4.8s com 0 erros e 0 avisos.
    - Todos os 555 testes automatizados do backend (.NET 9) passando sem falhas.
+
+### Detailed Log: FASE 11 — Testes e Validação de Ponta a Ponta (Cross-Tenant Security, Race Conditions, Chaos Resilience)
+1. **Defesa Anti-IDOR e Isolamento Cross-Tenant Ponta a Ponta:**
+   - Expandida a suíte em `tests/HookBridge.IntegrationTests/Security/CrossTenantIsolationTests.cs`:
+     - **Aplicações:** Tenant B é bloqueado com `404 Not Found` ao tentar ler (`GET /api/v1/apps/{id}`), alterar (`PUT /api/v1/apps/{id}`) ou excluir (`DELETE /api/v1/apps/{id}`) aplicações do Tenant A.
+     - **Endpoints & Segredos:** Tenant B é bloqueado com `404 Not Found` ao tentar ler (`GET /api/v1/endpoints/{id}`), alterar (`PUT /api/v1/endpoints/{id}`), excluir (`DELETE /api/v1/endpoints/{id}`), listar segredos (`GET /api/v1/endpoints/{id}/secrets`) ou rotacionar segredos (`POST /api/v1/endpoints/{id}/secrets/rotate`) de endpoints do Tenant A.
+     - **API Keys:** Tentativa de revogação cruzada de chaves (`DELETE /api/v1/api-keys/{id}`) rejeitada com `404 Not Found`, mantendo as credenciais do Tenant A ativas.
+     - **Entregas & Tentativas:** Leitura de entregas (`GET /api/v1/deliveries/{id}`) e registro fraudulento de tentativas (`POST /api/v1/deliveries/{id}/attempts`) bloqueados com `404 Not Found`.
+     - **Replay & Linhagem:** Bloqueio fail-closed em replays individuais (`POST /api/v1/deliveries/{id}/replay`), consulta de linhagem (`GET /api/v1/deliveries/{id}/lineage`) e tentativa de redirecionamento de entrega para endpoints de outros tenants (`OverrideEndpointId`).
+     - **Bulk Replay Seguro:** Ao executar bulk replay especificando explicitamente IDs de entregas de outro tenant, a query filtra estritamente por `TenantId`, resultando em 0 replays e protegendo a integridade dos dados do tenant alvo.
+     - **Métricas de Saúde & Traces OTel:** Bloqueio estrito de acesso a métricas de confiabilidade (`GET /api/v1/endpoints/{id}/health`) e buscas por correlation IDs e identificadores de traces distribuídos (`GET /api/v1/traces/{id}`) pertencentes a outros tenants.
+2. **Concorrência e Race Conditions Extremas:**
+   - Expandida a suíte em `tests/HookBridge.IntegrationTests/Concurrency/ConcurrentOperationsTests.cs`:
+     - `Concurrent_RefreshToken_Rotation_Detects_Compromise_And_Revokes_Token_Family`: Duas requisições simultâneas com o mesmo Refresh Token; a primeira rotaciona com sucesso, a subsequente detecta atômica e imediatamente o reuso indevido (`RevokedDueToCompromisedTokenReuse`), emitindo erro de domínio `Auth.CompromisedToken` com HTTP 401 e revogando imediatamente toda a família de sessões do usuário.
+     - `Concurrent_Webhook_Secret_Rotation_Maintains_Dual_Key_Integrity`: Rotações simultâneas de segredo HMAC executadas com sucesso, garantindo exatamente 1 chave `Active`, 1 chave `Rotating` e versões monotônicas consistentes sem corrupção relacional.
+     - `Concurrent_Replay_For_Same_Delivery_Maintains_Lineage_Integrity`: Replays paralelos para a mesma entrega de origem geram instâncias filhas únicas e preservam a integridade da árvore de linhagem.
+3. **Resiliência a Falhas Distribuídas e Contenção de Blast Radius:**
+   - Expandida a suíte em `tests/HookBridge.IntegrationTests/Chaos/DistributedFailureIntegrationTests.cs`:
+     - `EventFlow_BrokerOutage_BlastRadius_IsContained_And_DoesNotAffect_Unrelated_Tenant`: Queda catastrófica simulada no cluster RabbitMQ / EventFlow Data Plane afeta graciosamente apenas a ingestão com ProblemDetails (500), mantendo as operações de Control Plane de outros tenants 100% operacionais (blast radius zero).
+     - `CircuitBreaker_FailureOnOneEndpoint_DoesNotDegrade_OtherEndpoints`: Abertura de Circuit Breaker em um endpoint com falhas consecutivas mantém endpoints saudáveis em estado `Closed` com 100% de pontuação de saúde.
+4. **Validação & Qualidade:**
+   - **567 testes automatizados passando** (449 UnitTests + 118 IntegrationTests), 0 falhas e 0 warnings.
+   - Frontend Angular 21 compilando sem erros em 5.1s (`ng build --configuration production`).
+

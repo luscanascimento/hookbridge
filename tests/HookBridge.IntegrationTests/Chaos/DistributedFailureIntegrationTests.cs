@@ -431,4 +431,134 @@ public class DistributedFailureIntegrationTests : IClassFixture<CustomWebApplica
         responses.Where(r => r.StatusCode == HttpStatusCode.GatewayTimeout).Should().HaveCount(5);
         responses.Where(r => r.StatusCode == HttpStatusCode.BadGateway).Should().HaveCount(5);
     }
+
+    [Fact]
+    public async Task EventFlow_BrokerOutage_BlastRadius_IsContained_And_DoesNotAffect_Unrelated_Tenant()
+    {
+        // Arrange: Setup Tenant A and Tenant B
+        var tokenA = await RegisterAndGetTokenAsync("blast-a");
+        var tokenB = await RegisterAndGetTokenAsync("blast-b");
+
+        using var clientA = _factory.CreateClient();
+        clientA.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenA);
+
+        using var clientB = _factory.CreateClient();
+        clientB.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenB);
+
+        // Tenant A creates app and endpoint
+        var appResA = await clientA.PostAsJsonAsync("/api/v1/apps", new CreateApplicationCommand("Tenant A App", "Desc"));
+        var appA = await appResA.Content.ReadFromJsonAsync<ApplicationResponse>(JsonOptions);
+        await clientA.PostAsJsonAsync("/api/v1/endpoints", new CreateEndpointCommand(
+            ApplicationId: appA!.Id,
+            TargetUrl: "https://api.github.com/webhook/tenant-a",
+            SubscribedEvents: new List<string> { "event.*" }));
+
+        // Act 1: Simulate catastrophic EventFlow / RabbitMQ broker outage
+        _fakeEventFlowClient.ShouldFailIngest = true;
+        _fakeEventFlowClient.IngestFailureError = DomainError.Failure("EventFlow.BrokerDown", "EventFlow broker cluster unreachable at amqp://broker:5672");
+
+        // Tenant A attempts event ingestion -> Fails gracefully with 500 and ProblemDetails
+        var payload = JsonDocument.Parse("{\"test\":\"fail\"}").RootElement;
+        var failRes = await clientA.PostAsJsonAsync("/api/v1/events", new PublishEventCommand("event.test", payload));
+        failRes.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        var errBody = await failRes.Content.ReadAsStringAsync();
+        errBody.Should().Contain("EventFlow.BrokerDown");
+
+        // Act 2: Tenant B executes standard control plane operations simultaneously
+        var appResB = await clientB.PostAsJsonAsync("/api/v1/apps", new CreateApplicationCommand("Tenant B App", "Desc B"));
+        appResB.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var listAppsResB = await clientB.GetAsync("/api/v1/apps");
+        listAppsResB.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var meResB = await clientB.GetAsync("/api/v1/auth/me");
+        meResB.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Assert: Unrelated tenant control plane operations were completely unaffected by the Data Plane broker outage
+
+        // Act 3: Restore broker and verify Tenant A recovers
+        _fakeEventFlowClient.Reset();
+        var recoverRes = await clientA.PostAsJsonAsync("/api/v1/events", new PublishEventCommand("event.test", payload));
+        recoverRes.StatusCode.Should().Be(HttpStatusCode.Accepted);
+    }
+
+    [Fact]
+    public async Task CircuitBreaker_FailureOnOneEndpoint_DoesNotDegrade_OtherEndpoints()
+    {
+        // Arrange: Setup tenant with 2 separate endpoints
+        var token = await RegisterAndGetTokenAsync("cb-blast");
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var appRes = await client.PostAsJsonAsync("/api/v1/apps", new CreateApplicationCommand("Telemetry Cluster", "Cluster"));
+        var app = await appRes.Content.ReadFromJsonAsync<ApplicationResponse>(JsonOptions);
+
+        var ep1Res = await client.PostAsJsonAsync("/api/v1/endpoints", new CreateEndpointCommand(
+            ApplicationId: app!.Id,
+            TargetUrl: "https://api.github.com/webhook/ep1-fail",
+            Description: "Degraded Target",
+            SubscribedEvents: new List<string> { "order.*" }));
+        var ep1 = await ep1Res.Content.ReadFromJsonAsync<EndpointCreatedResponse>(JsonOptions);
+
+        var ep2Res = await client.PostAsJsonAsync("/api/v1/endpoints", new CreateEndpointCommand(
+            ApplicationId: app.Id,
+            TargetUrl: "https://api.github.com/webhook/ep2-healthy",
+            Description: "Healthy Target",
+            SubscribedEvents: new List<string> { "customer.*" }));
+        var ep2 = await ep2Res.Content.ReadFromJsonAsync<EndpointCreatedResponse>(JsonOptions);
+
+        // Act 1: Inject 5 consecutive failures strictly into Endpoint 1
+        for (int i = 0; i < 5; i++)
+        {
+            var payload = JsonDocument.Parse($"{{\"i\":{i}}}").RootElement;
+            await client.PostAsJsonAsync("/api/v1/events", new PublishEventCommand("order.created", payload));
+            var deliveriesRes = await client.GetAsync($"/api/v1/deliveries?endpointId={ep1!.Id}");
+            var list = await deliveriesRes.Content.ReadFromJsonAsync<PagedList<DeliveryResponse>>(JsonOptions);
+            var deliv = list!.Items.OrderByDescending(d => d.CreatedAt).First();
+
+            await client.PostAsJsonAsync($"/api/v1/deliveries/{deliv.Id}/attempts", new RecordDeliveryAttemptCommand(
+                HttpStatusCode: 503,
+                RequestHeadersJson: "{}",
+                RequestBody: "{}",
+                ResponseHeadersJson: "{}",
+                ResponseBody: "{\"error\":\"Service Unavailable\"}",
+                ElapsedMs: 80,
+                ErrorMessage: "Service Unavailable",
+                FinalStatus: DeliveryStatus.Failed));
+        }
+
+        // Act 2: Dispatch a successful event and attempt to Endpoint 2
+        var payload2 = JsonDocument.Parse("{\"customer\":\"vip_01\"}").RootElement;
+        await client.PostAsJsonAsync("/api/v1/events", new PublishEventCommand("customer.created", payload2));
+        var deliveriesRes2 = await client.GetAsync($"/api/v1/deliveries?endpointId={ep2!.Id}");
+        var list2 = await deliveriesRes2.Content.ReadFromJsonAsync<PagedList<DeliveryResponse>>(JsonOptions);
+        var deliv2 = list2!.Items.OrderByDescending(d => d.CreatedAt).First();
+
+        await client.PostAsJsonAsync($"/api/v1/deliveries/{deliv2.Id}/attempts", new RecordDeliveryAttemptCommand(
+            HttpStatusCode: 200,
+            RequestHeadersJson: "{}",
+            RequestBody: "{}",
+            ResponseHeadersJson: "{}",
+            ResponseBody: "{\"status\":\"ok\"}",
+            ElapsedMs: 45,
+            ErrorMessage: null,
+            FinalStatus: DeliveryStatus.Success));
+
+        // Assert 1: Endpoint 1 circuit is Open and degraded
+        var healthRes1 = await client.GetAsync($"/api/v1/endpoints/{ep1!.Id}/health");
+        healthRes1.StatusCode.Should().Be(HttpStatusCode.OK);
+        var health1 = await healthRes1.Content.ReadFromJsonAsync<EndpointHealthResponse>(JsonOptions);
+        health1!.CircuitState.Should().Be("Open");
+        health1.ConsecutiveFailures.Should().Be(5);
+        health1.Incidents.Should().NotBeEmpty();
+
+        // Assert 2: Endpoint 2 remains Healthy and Closed with 100% health score and 0 consecutive failures
+        var healthRes2 = await client.GetAsync($"/api/v1/endpoints/{ep2!.Id}/health");
+        healthRes2.StatusCode.Should().Be(HttpStatusCode.OK);
+        var health2 = await healthRes2.Content.ReadFromJsonAsync<EndpointHealthResponse>(JsonOptions);
+        health2!.CircuitState.Should().Be("Closed");
+        health2.ConsecutiveFailures.Should().Be(0);
+        health2.Incidents.Should().BeEmpty();
+        health2.HealthScorePercent.Should().Be(100);
+    }
 }

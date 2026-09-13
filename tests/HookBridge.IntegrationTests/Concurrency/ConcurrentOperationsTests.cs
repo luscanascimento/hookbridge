@@ -229,4 +229,137 @@ public sealed class ConcurrentOperationsTests : IClassFixture<CustomWebApplicati
         // Assert: All bulk replay requests respond successfully
         responses.Should().AllSatisfy(r => r.StatusCode.Should().Be(HttpStatusCode.OK));
     }
+
+    [Fact]
+    public async Task Concurrent_RefreshToken_Rotation_Detects_Compromise_And_Revokes_Token_Family()
+    {
+        // Arrange: Register a tenant user with initial access and refresh tokens
+        var slug = $"rtr-conc-{Guid.NewGuid():N}"[..16];
+        var regRes = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterTenantCommand(
+            TenantIdentifier: slug,
+            TenantName: "RTR Corp",
+            AdminEmail: $"{slug}@rtr.test",
+            AdminPassword: "SecurePassword#2026"));
+        regRes.StatusCode.Should().Be(HttpStatusCode.Created);
+        var auth = await regRes.Content.ReadFromJsonAsync<AuthResponse>(JsonOptions);
+        var originalRefreshToken = auth!.RefreshToken;
+
+        // Act 1: The first refresh request successfully rotates the token
+        var firstRefreshRes = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshTokenCommand(originalRefreshToken));
+        firstRefreshRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var rotatedAuth = await firstRefreshRes.Content.ReadFromJsonAsync<AuthResponse>(JsonOptions);
+        rotatedAuth.Should().NotBeNull();
+        rotatedAuth!.AccessToken.Should().NotBeNullOrWhiteSpace();
+        rotatedAuth.RefreshToken.Should().NotBe(originalRefreshToken);
+
+        // Act 2: A second concurrent/reused request attempts to use the already-revoked originalRefreshToken
+        var reuseRefreshRes = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshTokenCommand(originalRefreshToken));
+
+        // Assert 2: Second attempt detects compromised reuse and terminates all active sessions
+        reuseRefreshRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        var problemDetails = await reuseRefreshRes.Content.ReadAsStringAsync();
+        problemDetails.Should().Contain("Auth.CompromisedToken");
+
+        // Act & Assert 3: The newly issued token is ALSO revoked because the entire token family was terminated
+        var subsequentRefreshRes = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshTokenCommand(rotatedAuth.RefreshToken));
+        subsequentRefreshRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        var subsequentProblem = await subsequentRefreshRes.Content.ReadAsStringAsync();
+        subsequentProblem.Should().Contain("Auth.CompromisedToken");
+    }
+
+    [Fact]
+    public async Task Concurrent_Webhook_Secret_Rotation_Maintains_Dual_Key_Integrity()
+    {
+        // Arrange
+        var (token, _, epId) = await SetupTenantAndEndpointAsync("sec-rot-conc", "payment.*");
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // Act: Concurrently/sequentially rotate secrets multiple times
+        var semaphore = new SemaphoreSlim(1, 1);
+        var tasks = new List<Task<HttpResponseMessage>>();
+        for (int i = 0; i < 3; i++)
+        {
+            tasks.Add(Task.Run(async () =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    using var rotClient = _factory.CreateClient();
+                    rotClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                    return await rotClient.PostAsync($"/api/v1/endpoints/{epId}/secrets/rotate", null);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }));
+        }
+
+        var responses = await Task.WhenAll(tasks);
+
+        // Assert: All 3 rotations succeed
+        responses.Should().AllSatisfy(r => r.StatusCode.Should().Be(HttpStatusCode.Created));
+
+        // Query the endpoint to verify secret versions and status
+        var epRes = await client.GetAsync($"/api/v1/endpoints/{epId}");
+        epRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var ep = await epRes.Content.ReadFromJsonAsync<EndpointResponse>(JsonOptions);
+        ep.Should().NotBeNull();
+        // Version started at 1, rotated 3 times => version 4
+        ep!.ActiveSecretVersion.Should().Be(4);
+        ep.ActiveSecretPrefix.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task Concurrent_Replay_For_Same_Delivery_Maintains_Lineage_Integrity()
+    {
+        // Arrange
+        var (token, _, _) = await SetupTenantAndEndpointAsync("rep-conc", "order.*");
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var payload = JsonDocument.Parse("{\"orderId\":\"ord_conc_99\"}").RootElement;
+        var pubRes = await client.PostAsJsonAsync("/api/v1/events", new PublishEventCommand("order.created", payload));
+        pubRes.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+        var deliveriesRes = await client.GetAsync("/api/v1/deliveries");
+        var paged = await deliveriesRes.Content.ReadFromJsonAsync<PagedList<DeliveryResponse>>(JsonOptions);
+        var rootDeliveryId = paged!.Items[0].Id;
+
+        // Act: Concurrently replay the exact same delivery 3 times
+        var semaphore = new SemaphoreSlim(1, 1);
+        var tasks = new List<Task<HttpResponseMessage>>();
+        for (int i = 0; i < 3; i++)
+        {
+            tasks.Add(Task.Run(async () =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    using var replayClient = _factory.CreateClient();
+                    replayClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                    return await replayClient.PostAsJsonAsync($"/api/v1/deliveries/{rootDeliveryId}/replay", new ReplayDeliveryCommand());
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }));
+        }
+
+        var responses = await Task.WhenAll(tasks);
+
+        // Assert: All 3 replays succeed with 200 OK
+        responses.Should().AllSatisfy(r => r.StatusCode.Should().Be(HttpStatusCode.OK));
+
+        // Verify Lineage
+        var lineageRes = await client.GetAsync($"/api/v1/deliveries/{rootDeliveryId}/lineage");
+        lineageRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var lineage = await lineageRes.Content.ReadFromJsonAsync<DeliveryLineageResponse>(JsonOptions);
+        lineage.Should().NotBeNull();
+        lineage!.RootDeliveryId.Should().Be(rootDeliveryId);
+        // Lineage chain includes root delivery + 3 replayed deliveries
+        lineage.LineageChain.Should().HaveCount(4);
+    }
 }
