@@ -12,33 +12,33 @@ namespace HookBridge.UnitTests.Configuration;
 public sealed class ConfigurationAndSecretsValidationTests
 {
     [Fact]
-    public void JwtOptions_WithEmptySecretKey_ShouldFailValidation()
+    public void JwtOptions_WithEmptyKey_ShouldFailValidation()
     {
         var options = new JwtOptions
         {
             Issuer = "HookBridge",
             Audience = "Clients",
-            SecretKey = string.Empty
+            Key = string.Empty
         };
 
         var validationResults = ValidateModel(options);
 
-        validationResults.Should().Contain(v => v.MemberNames.Contains(nameof(JwtOptions.SecretKey)));
+        validationResults.Should().Contain(v => v.MemberNames.Contains(nameof(JwtOptions.Key)));
     }
 
     [Fact]
-    public void JwtOptions_WithShortSecretKey_ShouldFailValidation()
+    public void JwtOptions_WithShortKey_ShouldFailValidation()
     {
         var options = new JwtOptions
         {
             Issuer = "HookBridge",
             Audience = "Clients",
-            SecretKey = "short_key_under_32_bytes"
+            Key = "short_key_under_32_bytes"
         };
 
         var validationResults = ValidateModel(options);
 
-        validationResults.Should().Contain(v => v.MemberNames.Contains(nameof(JwtOptions.SecretKey)));
+        validationResults.Should().Contain(v => v.MemberNames.Contains(nameof(JwtOptions.Key)));
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public sealed class ConfigurationAndSecretsValidationTests
         {
             Issuer = "HookBridge",
             Audience = "Clients",
-            SecretKey = "valid_secure_jwt_secret_key_at_least_32_characters_long_2026!",
+            Key = "valid_secure_jwt_secret_key_at_least_32_characters_long_2026!",
             AccessTokenExpirationMinutes = 30,
             RefreshTokenExpirationDays = 14
         };
@@ -132,7 +132,7 @@ public sealed class ConfigurationAndSecretsValidationTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ASPNETCORE_ENVIRONMENT"] = "Production",
-                ["Jwt:SecretKey"] = "valid_secure_jwt_secret_key_at_least_32_characters_long_2026!",
+                ["Jwt:Key"] = "valid_secure_jwt_secret_key_at_least_32_characters_long_2026!",
                 ["WebhookEncryption:MasterKey"] = "7f8e9d0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6",
                 ["EventFlow:BaseUrl"] = "http://localhost:5000",
                 ["EventFlow:ApiKey"] = "valid_eventflow_key_12345"
@@ -157,7 +157,7 @@ public sealed class ConfigurationAndSecretsValidationTests
                 ["ConnectionStrings:DefaultConnection"] = "Host=localhost;Database=test;Username=test;Password=test",
                 ["Jwt:Issuer"] = "HookBridge",
                 ["Jwt:Audience"] = "Clients",
-                ["Jwt:SecretKey"] = "",
+                ["Jwt:Key"] = "",
                 ["WebhookEncryption:MasterKey"] = "7f8e9d0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6",
                 ["EventFlow:BaseUrl"] = "http://localhost:5000",
                 ["EventFlow:ApiKey"] = "valid_eventflow_key_12345"

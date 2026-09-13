@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/services/auth.service';
@@ -429,6 +430,7 @@ import { RealtimeDeliveryEvent } from '../../core/signalr/models/signalr.models'
   `
 })
 export class DashboardComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   readonly auth = inject(AuthService);
   readonly signalR = inject(SignalRService);
   private readonly deliveryService = inject(DeliveryService);
@@ -513,7 +515,7 @@ export class DashboardComponent implements OnInit {
 
   fetchStats(): void {
     this.isLoading.set(true);
-    this.deliveryService.getStats().subscribe({
+    this.deliveryService.getStats().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.stats.set(res);
         this.isLoading.set(false);
@@ -527,7 +529,7 @@ export class DashboardComponent implements OnInit {
 
   fetchEndpoints(): void {
     this.isLoadingEndpoints.set(true);
-    this.endpointService.getEndpoints().subscribe({
+    this.endpointService.getEndpoints().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.endpoints.set(res);
         this.isLoadingEndpoints.set(false);
@@ -556,7 +558,7 @@ export class DashboardComponent implements OnInit {
 
   replayCurrentEvent(deliveryId: string): void {
     this.isReplayingSingle.set(true);
-    this.deliveryService.replayDelivery(deliveryId).subscribe({
+    this.deliveryService.replayDelivery(deliveryId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.isReplayingSingle.set(false);
         this.toast.success('Delivery replayed successfully via EventFlow');
@@ -572,7 +574,7 @@ export class DashboardComponent implements OnInit {
 
   replayAllDlq(): void {
     this.isReplayingDlq.set(true);
-    this.deliveryService.bulkReplay({ status: 'DeadLettered' as any, maxCount: 100 }).subscribe({
+    this.deliveryService.bulkReplay({ status: 'DeadLettered' as any, maxCount: 100 }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.isReplayingDlq.set(false);
         this.toast.success(`Queued ${res.replayedCount} dead-lettered deliveries for replay`);

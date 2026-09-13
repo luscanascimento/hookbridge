@@ -50,6 +50,8 @@ HookBridge acts as the **Control Plane, Developer Experience, and Observability 
                 └────────────────────────────────────────┘
 ```
 
+**EventFlow** is the companion data-plane processing engine that handles the actual webhook dispatch pipeline. In this repository, EventFlow is represented through integration contracts and well-defined API boundaries. For more details on this boundary, see the [Integration Contract](docs/architecture/integration-contract.md).
+
 ---
 
 ## 2. Core Capabilities

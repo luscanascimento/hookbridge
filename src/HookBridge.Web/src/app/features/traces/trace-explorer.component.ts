@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -450,6 +451,7 @@ import { PagedList } from '../../shared/models/control-plane.models';
   `
 })
 export class TraceExplorerComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly traceService = inject(TraceService);
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
@@ -474,7 +476,7 @@ export class TraceExplorerComponent implements OnInit {
   readonly fromDate = signal<string | null>(null);
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       if (params['traceId'] || params['correlationId']) {
         const id = params['traceId'] || params['correlationId'];
         this.searchQuery.set(id);
@@ -496,7 +498,7 @@ export class TraceExplorerComponent implements OnInit {
       pageSize: 20
     };
 
-    this.traceService.getTraces(params).subscribe({
+    this.traceService.getTraces(params).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res: PagedList<TraceSummary>) => {
         this.tracesList.set(res.items || []);
         this.totalTracesCount.set(res.totalCount || 0);
@@ -521,7 +523,7 @@ export class TraceExplorerComponent implements OnInit {
     this.isLoadingDetail.set(true);
     this.selectedSpan.set(null);
 
-    this.traceService.getTraceDetail(identifier).subscribe({
+    this.traceService.getTraceDetail(identifier).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (detail) => {
         this.traceDetail.set(detail);
         this.isLoadingDetail.set(false);

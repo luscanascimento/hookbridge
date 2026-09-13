@@ -17,11 +17,11 @@ public sealed class TokenService : ITokenService
     public TokenService(IOptions<JwtOptions> options)
     {
         _options = options.Value;
-        if (string.IsNullOrWhiteSpace(_options.SecretKey) || _options.SecretKey.Length < 32)
+        if (string.IsNullOrWhiteSpace(_options.Key) || _options.Key.Length < 32)
         {
-            throw new InvalidOperationException("Critical security failure: 'Jwt:SecretKey' must be configured and at least 32 characters (256 bits) long.");
+            throw new InvalidOperationException("Critical security failure: 'Jwt:Key' must be configured and at least 32 characters (256 bits) long.");
         }
-        _signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey));
+        _signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Key));
     }
 
     public GeneratedTokens GenerateTokens(User user, Tenant tenant)

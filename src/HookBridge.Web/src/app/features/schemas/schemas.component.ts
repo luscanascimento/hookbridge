@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -498,6 +499,7 @@ import { SchemaVersionModalComponent } from './schema-version-modal.component';
   `
 })
 export class SchemasComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly schemaService = inject(EventSchemaService);
   private readonly toast = inject(ToastService);
 
@@ -543,7 +545,7 @@ export class SchemasComponent implements OnInit {
 
   loadSchemas(): void {
     this.isLoading.set(true);
-    this.schemaService.getSchemas().subscribe({
+    this.schemaService.getSchemas().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => {
         this.schemas.set(data);
         this.filterSchemas();
@@ -594,7 +596,7 @@ export class SchemasComponent implements OnInit {
   }
 
   inspectSchema(id: string): void {
-    this.schemaService.getSchemaById(id).subscribe({
+    this.schemaService.getSchemaById(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (detail) => {
         this.selectedSchema.set(detail);
         this.isDrawerOpen.set(true);
@@ -620,7 +622,7 @@ export class SchemasComponent implements OnInit {
 
   loadDocs(schemaId: string): void {
     this.isLoadingDocs.set(true);
-    this.schemaService.getSchemaDocs(schemaId).subscribe({
+    this.schemaService.getSchemaDocs(schemaId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (docs) => {
         this.schemaDocs.set(docs);
         this.isLoadingDocs.set(false);
@@ -633,7 +635,7 @@ export class SchemasComponent implements OnInit {
 
   activateVersion(versionId: string): void {
     if (!this.selectedSchema()) return;
-    this.schemaService.activateVersion(this.selectedSchema()!.id, versionId).subscribe({
+    this.schemaService.activateVersion(this.selectedSchema()!.id, versionId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success('Activated', 'Schema version set as active.');
         this.inspectSchema(this.selectedSchema()!.id);
@@ -647,7 +649,7 @@ export class SchemasComponent implements OnInit {
 
   deprecateVersion(versionId: string): void {
     if (!this.selectedSchema()) return;
-    this.schemaService.deprecateVersion(this.selectedSchema()!.id, versionId).subscribe({
+    this.schemaService.deprecateVersion(this.selectedSchema()!.id, versionId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success('Deprecated', 'Schema version marked as deprecated.');
         this.inspectSchema(this.selectedSchema()!.id);
@@ -669,7 +671,7 @@ export class SchemasComponent implements OnInit {
   runDriftAudit(): void {
     if (!this.selectedSchema()) return;
     this.isRunningDriftAudit.set(true);
-    this.schemaService.detectDrift(this.selectedSchema()!.id, 50).subscribe({
+    this.schemaService.detectDrift(this.selectedSchema()!.id, 50).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (report) => {
         this.driftReport.set(report);
         this.isRunningDriftAudit.set(false);
@@ -693,7 +695,7 @@ export class SchemasComponent implements OnInit {
     this.schemaService.validatePayload({
       schemaId: this.selectedSchema()!.id,
       payloadJson: this.sandboxPayload()
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.isValidatingSandbox.set(false);
         this.sandboxValidationResult.set(res);
@@ -710,7 +712,7 @@ export class SchemasComponent implements OnInit {
       return;
     }
 
-    this.schemaService.deleteSchema(summary.id).subscribe({
+    this.schemaService.deleteSchema(summary.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success('Schema Deleted', `Event schema '${summary.name}' was removed.`);
         if (this.selectedSchema()?.id === summary.id) {

@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, computed, inject, signal, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, inject, signal, effect, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SimulatorService } from '../../core/services/simulator.service';
@@ -878,6 +879,7 @@ interface QuickPreset {
   `
 })
 export class SimulatorComponent implements OnInit, OnDestroy {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly simulatorService = inject(SimulatorService);
   readonly signalR = inject(SignalRService);
   private readonly toast = inject(ToastService);
@@ -1017,7 +1019,7 @@ export class SimulatorComponent implements OnInit, OnDestroy {
 
   loadRules(): void {
     this.loadingRules.set(true);
-    this.simulatorService.getRules().subscribe({
+    this.simulatorService.getRules().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => {
         this.rules.set(data);
         this.loadingRules.set(false);
@@ -1032,7 +1034,7 @@ export class SimulatorComponent implements OnInit, OnDestroy {
       search: this.executionSearchTerm || undefined,
       statusCode: this.executionStatusFilter ?? undefined,
       pageSize: 50
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => {
         this.executions.set(data.items);
         this.totalExecutionsCount.set(data.totalCount);
@@ -1043,7 +1045,7 @@ export class SimulatorComponent implements OnInit, OnDestroy {
   }
 
   loadStats(): void {
-    this.simulatorService.getStats().subscribe({
+    this.simulatorService.getStats().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => this.stats.set(data),
       error: () => {}
     });
@@ -1062,7 +1064,7 @@ export class SimulatorComponent implements OnInit, OnDestroy {
   }
 
   clearExecutions(): void {
-    this.simulatorService.clearExecutions().subscribe({
+    this.simulatorService.clearExecutions().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.executions.set([]);
         this.totalExecutionsCount.set(0);
@@ -1073,7 +1075,7 @@ export class SimulatorComponent implements OnInit, OnDestroy {
   }
 
   resetRuleSteps(ruleId: string): void {
-    this.simulatorService.resetRuleSteps(ruleId).subscribe({
+    this.simulatorService.resetRuleSteps(ruleId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.loadRules();
         this.toast.success('Step Counter Reset', 'Rule sequential step counter has been reset to 0.');
@@ -1084,7 +1086,7 @@ export class SimulatorComponent implements OnInit, OnDestroy {
   deleteRule(ruleId: string): void {
     if (!confirm('Are you sure you want to delete this simulator rule?')) return;
 
-    this.simulatorService.deleteRule(ruleId).subscribe({
+    this.simulatorService.deleteRule(ruleId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.loadRules();
         this.loadStats();
@@ -1159,7 +1161,7 @@ export class SimulatorComponent implements OnInit, OnDestroy {
         isActive: this.ruleForm.isActive
       };
 
-      this.simulatorService.updateRule(this.editingRuleId()!, updateReq).subscribe({
+      this.simulatorService.updateRule(this.editingRuleId()!, updateReq).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.savingRule.set(false);
           this.closeRuleModal();
@@ -1186,7 +1188,7 @@ export class SimulatorComponent implements OnInit, OnDestroy {
         responseContentType: 'application/json'
       };
 
-      this.simulatorService.createRule(createReq).subscribe({
+      this.simulatorService.createRule(createReq).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.savingRule.set(false);
           this.closeRuleModal();
@@ -1235,7 +1237,7 @@ export class SimulatorComponent implements OnInit, OnDestroy {
       'User-Agent': 'HookBridge-SimulatorWorkbench/1.0'
     });
 
-    this.simulatorService.testDispatch(req).subscribe({
+    this.simulatorService.testDispatch(req).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: res => {
         this.workbenchResult.set(res);
         this.dispatchingTest.set(false);

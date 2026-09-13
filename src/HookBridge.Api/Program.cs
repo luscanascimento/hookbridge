@@ -23,6 +23,7 @@ builder.Services.AddSingleton<ISimulatorRealtimeNotifier, SimulatorRealtimeNotif
 // 3. Exception Handling & RFC 7807 ProblemDetails
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+builder.Services.AddMemoryCache();
 
 // 4. Rate Limiting Protection
 builder.Services.AddRateLimiter(options =>
@@ -60,9 +61,24 @@ builder.Services.AddRateLimiter(options =>
 // 5. OpenAPI 3.1 Documentation
 builder.Services.AddOpenApi();
 
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+    ?? throw new InvalidOperationException("CORS AllowedOrigins is not configured.");
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 var app = builder.Build();
 
 // 6. Security & Error Handling Pipeline
+app.UseCors();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<TraceContextEnricherMiddleware>();
 app.UseExceptionHandler();

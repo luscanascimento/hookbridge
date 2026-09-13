@@ -38,6 +38,7 @@ public sealed class GetEndpointsUseCase
         var endpoints = await query
             .Include(e => e.Secrets)
             .Include(e => e.Subscriptions)
+            .AsSplitQuery()
             .OrderByDescending(e => e.CreatedAt)
             .ToListAsync(cancellationToken);
 

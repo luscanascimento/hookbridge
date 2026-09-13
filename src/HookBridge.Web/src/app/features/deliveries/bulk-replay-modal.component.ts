@@ -1,4 +1,5 @@
-import { Component, inject, input, output, signal, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, input, output, signal, effect, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent } from '../../shared/components/ui/modal.component';
@@ -119,6 +120,7 @@ import { DeliveryStatus } from '../../core/signalr/models/signalr.models';
   `
 })
 export class BulkReplayModalComponent {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly deliveryService = inject(DeliveryService);
   private readonly toast = inject(ToastService);
 
@@ -158,7 +160,7 @@ export class BulkReplayModalComponent {
       maxCount: this.maxCount()
     };
 
-    this.deliveryService.bulkReplay(command).subscribe({
+    this.deliveryService.bulkReplay(command).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.isLoading.set(false);
         this.toast.success(

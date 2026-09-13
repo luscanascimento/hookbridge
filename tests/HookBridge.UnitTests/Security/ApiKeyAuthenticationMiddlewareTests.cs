@@ -11,6 +11,8 @@ using HookBridge.Infrastructure.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
+using Microsoft.Extensions.Caching.Memory;
+
 namespace HookBridge.UnitTests.Security;
 
 public sealed class ApiKeyAuthenticationMiddlewareTests : IDisposable
@@ -19,6 +21,7 @@ public sealed class ApiKeyAuthenticationMiddlewareTests : IDisposable
     private readonly KeyGenerator _keyGenerator;
     private readonly DateTimeProvider _dateTimeProvider;
     private readonly Guid _tenantId;
+    private readonly IMemoryCache _cache;
 
     public ApiKeyAuthenticationMiddlewareTests()
     {
@@ -33,6 +36,7 @@ public sealed class ApiKeyAuthenticationMiddlewareTests : IDisposable
         _dbContext = new HookBridgeDbContext(options, tenantContext);
         _keyGenerator = new KeyGenerator();
         _dateTimeProvider = new DateTimeProvider();
+        _cache = new MemoryCache(new MemoryCacheOptions());
     }
 
     public void Dispose()
@@ -72,7 +76,7 @@ public sealed class ApiKeyAuthenticationMiddlewareTests : IDisposable
         var context = new DefaultHttpContext();
 
         // Act
-        await middleware.InvokeAsync(context, _dbContext, _keyGenerator, _dateTimeProvider);
+        await middleware.InvokeAsync(context, _dbContext, _keyGenerator, _dateTimeProvider, _cache);
 
         // Assert
         nextCalled.Should().BeTrue();
@@ -95,7 +99,7 @@ public sealed class ApiKeyAuthenticationMiddlewareTests : IDisposable
         context.Request.Headers["X-Api-Key"] = plainKey;
 
         // Act
-        await middleware.InvokeAsync(context, _dbContext, _keyGenerator, _dateTimeProvider);
+        await middleware.InvokeAsync(context, _dbContext, _keyGenerator, _dateTimeProvider, _cache);
 
         // Assert
         nextCalled.Should().BeTrue();
@@ -122,7 +126,7 @@ public sealed class ApiKeyAuthenticationMiddlewareTests : IDisposable
         context.Request.Headers["Authorization"] = $"Bearer {plainKey}";
 
         // Act
-        await middleware.InvokeAsync(context, _dbContext, _keyGenerator, _dateTimeProvider);
+        await middleware.InvokeAsync(context, _dbContext, _keyGenerator, _dateTimeProvider, _cache);
 
         // Assert
         nextCalled.Should().BeTrue();
@@ -145,7 +149,7 @@ public sealed class ApiKeyAuthenticationMiddlewareTests : IDisposable
         context.Request.Headers["X-Api-Key"] = "hb_live_000000000000000000000000";
 
         // Act
-        await middleware.InvokeAsync(context, _dbContext, _keyGenerator, _dateTimeProvider);
+        await middleware.InvokeAsync(context, _dbContext, _keyGenerator, _dateTimeProvider, _cache);
 
         // Assert
         nextCalled.Should().BeFalse();
@@ -169,7 +173,7 @@ public sealed class ApiKeyAuthenticationMiddlewareTests : IDisposable
         context.Request.Headers["X-Api-Key"] = plainKey;
 
         // Act
-        await middleware.InvokeAsync(context, _dbContext, _keyGenerator, _dateTimeProvider);
+        await middleware.InvokeAsync(context, _dbContext, _keyGenerator, _dateTimeProvider, _cache);
 
         // Assert
         nextCalled.Should().BeFalse();

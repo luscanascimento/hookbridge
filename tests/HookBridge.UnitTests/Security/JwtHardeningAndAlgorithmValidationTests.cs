@@ -18,12 +18,12 @@ public sealed class JwtHardeningAndAlgorithmValidationTests
     [InlineData("")]
     [InlineData("short_key")]
     [InlineData("key_less_than_32_chars_1234567")]
-    public void TokenService_WhenSecretKeyIsWeakOrEmpty_ShouldThrowInvalidOperationException(string weakKey)
+    public void TokenService_WhenKeyIsWeakOrEmpty_ShouldThrowInvalidOperationException(string weakKey)
     {
         // Arrange
         var options = Options.Create(new JwtOptions
         {
-            SecretKey = weakKey,
+            Key = weakKey,
             Issuer = "TestIssuer",
             Audience = "TestAudience"
         });
@@ -42,7 +42,7 @@ public sealed class JwtHardeningAndAlgorithmValidationTests
         // Arrange
         var options = Options.Create(new JwtOptions
         {
-            SecretKey = StrongKey32,
+            Key = StrongKey32,
             Issuer = "HookBridge.ControlPlane",
             Audience = "HookBridge.DeveloperPortal",
             AccessTokenExpirationMinutes = 15,
@@ -127,7 +127,7 @@ public sealed class JwtHardeningAndAlgorithmValidationTests
         const string wrongKey = "Different_Key_That_Is_Also_At_Least_32_Bytes_Long!";
         var options = Options.Create(new JwtOptions
         {
-            SecretKey = StrongKey32,
+            Key = StrongKey32,
             Issuer = "HookBridge.ControlPlane",
             Audience = "HookBridge.DeveloperPortal"
         });

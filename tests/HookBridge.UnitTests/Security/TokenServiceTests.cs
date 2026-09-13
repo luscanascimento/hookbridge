@@ -16,7 +16,7 @@ public class TokenServiceTests
         {
             Issuer = "HookBridge.Test",
             Audience = "HookBridge.TestAudience",
-            SecretKey = "HookBridge_Test_Key_Must_Be_Long_Enough_For_HmacSha256_Signature!",
+            Key = "HookBridge_Test_Key_Must_Be_Long_Enough_For_HmacSha256_Signature!",
             AccessTokenExpirationMinutes = 15,
             RefreshTokenExpirationDays = 7
         });

@@ -35,8 +35,7 @@ export class SignalRService {
       return;
     }
 
-    const token = this.authService.getAccessToken();
-    if (!token) {
+    if (!this.authService.isAuthenticated()) {
       this.status.set('disconnected');
       return;
     }
@@ -46,7 +45,7 @@ export class SignalRService {
     try {
       this.hubConnection = new HubConnectionBuilder()
         .withUrl(environment.signalrHubUrl, {
-          accessTokenFactory: () => this.authService.getAccessToken() ?? ''
+          withCredentials: true
         })
         .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
         .configureLogging(environment.production ? LogLevel.None : LogLevel.Information)

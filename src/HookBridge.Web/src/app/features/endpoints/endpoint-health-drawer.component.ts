@@ -1,4 +1,5 @@
-import { Component, input, output, signal, effect, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, signal, effect, inject, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { SlideOverComponent } from '../../shared/components/ui/slide-over.component';
@@ -199,6 +200,7 @@ import { EndpointHealth } from '../../core/models/endpoint-health.models';
   `
 })
 export class EndpointHealthDrawerComponent {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly endpointService = inject(EndpointService);
 
   readonly isOpen = input<boolean>(false);
@@ -225,7 +227,7 @@ export class EndpointHealthDrawerComponent {
     this.isLoading.set(true);
     this.errorState.set(null);
 
-    this.endpointService.getEndpointHealth(id).subscribe({
+    this.endpointService.getEndpointHealth(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => {
         this.healthDetail.set(data);
         this.isLoading.set(false);

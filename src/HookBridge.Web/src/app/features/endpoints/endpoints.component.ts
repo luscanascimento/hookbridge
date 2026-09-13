@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EndpointService, CreateEndpointRequest, UpdateEndpointRequest } from '../../core/services/endpoint.service';
@@ -617,6 +618,7 @@ import {
   `
 })
 export class EndpointsComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly endpointService = inject(EndpointService);
   private readonly toast = inject(ToastService);
 
@@ -703,7 +705,7 @@ export class EndpointsComponent implements OnInit {
 
   loadEndpoints(): void {
     this.isLoading.set(true);
-    this.endpointService.getEndpoints().subscribe({
+    this.endpointService.getEndpoints().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.endpoints.set(res || []);
         this.isLoading.set(false);
@@ -717,7 +719,7 @@ export class EndpointsComponent implements OnInit {
   }
 
   loadHealthSummary(): void {
-    this.endpointService.getEndpointsHealthSummary().subscribe({
+    this.endpointService.getEndpointsHealthSummary().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (summary) => {
         this.tenantHealthSummary.set(summary);
       },
@@ -742,7 +744,7 @@ export class EndpointsComponent implements OnInit {
   }
 
   loadApplications(): void {
-    this.endpointService.getApplications().subscribe({
+    this.endpointService.getApplications().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.applications.set(res || []);
         if (res && res.length > 0 && !this.createForm.applicationId) {
@@ -790,7 +792,7 @@ export class EndpointsComponent implements OnInit {
     };
 
     this.isSubmitting.set(true);
-    this.endpointService.createEndpoint(payload).subscribe({
+    this.endpointService.createEndpoint(payload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (created) => {
         this.isSubmitting.set(false);
         this.closeCreateModal();
@@ -822,7 +824,7 @@ export class EndpointsComponent implements OnInit {
   }
 
   loadSecrets(endpointId: string): void {
-    this.endpointService.getSecrets(endpointId).subscribe({
+    this.endpointService.getSecrets(endpointId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (secrets) => {
         this.endpointSecrets.set(secrets || []);
       },
@@ -837,7 +839,7 @@ export class EndpointsComponent implements OnInit {
     if (!ep) return;
 
     this.isRotating.set(true);
-    this.endpointService.rotateSecret(ep.id).subscribe({
+    this.endpointService.rotateSecret(ep.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.isRotating.set(false);
         this.toast.success('Signing secret rotated successfully');
@@ -859,7 +861,7 @@ export class EndpointsComponent implements OnInit {
     const ep = this.selectedEndpoint();
     if (!ep) return;
 
-    this.endpointService.revokeSecret(ep.id, secretId).subscribe({
+    this.endpointService.revokeSecret(ep.id, secretId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success('Secret revoked');
         this.loadSecrets(ep.id);
@@ -908,7 +910,7 @@ export class EndpointsComponent implements OnInit {
     };
 
     this.isSubmitting.set(true);
-    this.endpointService.updateEndpoint(ep.id, payload).subscribe({
+    this.endpointService.updateEndpoint(ep.id, payload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.isSubmitting.set(false);
         this.closeEditModal();
@@ -924,7 +926,7 @@ export class EndpointsComponent implements OnInit {
 
   toggleStatus(ep: Endpoint): void {
     const newStatus: EndpointStatus = ep.status === 'Active' ? 'Paused' : 'Active';
-    this.endpointService.updateStatus(ep.id, newStatus).subscribe({
+    this.endpointService.updateStatus(ep.id, newStatus).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.success(`Endpoint status updated to ${newStatus}`);
         this.loadEndpoints();
@@ -950,7 +952,7 @@ export class EndpointsComponent implements OnInit {
     if (!ep) return;
 
     this.isSubmitting.set(true);
-    this.endpointService.deleteEndpoint(ep.id).subscribe({
+    this.endpointService.deleteEndpoint(ep.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.isSubmitting.set(false);
         this.closeDeleteModal();

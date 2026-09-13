@@ -39,3 +39,8 @@ public sealed record AuthResponse(
     int ExpiresIn,
     string TokenType,
     UserProfileResponse User);
+
+public sealed record AuthCookieResponse(
+    UserProfileResponse User,
+    string Message
+);

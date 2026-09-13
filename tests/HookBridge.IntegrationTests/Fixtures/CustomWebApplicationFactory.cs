@@ -1,9 +1,7 @@
-using System.Data.Common;
 using HookBridge.Application.Abstractions;
 using HookBridge.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +10,7 @@ namespace HookBridge.IntegrationTests.Fixtures;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private DbConnection? _connection;
+    public required string ConnectionString { get; init; }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -21,8 +19,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             var testConfig = new Dictionary<string, string?>
             {
                 ["ASPNETCORE_ENVIRONMENT"] = "Testing",
-                ["ConnectionStrings:DefaultConnection"] = "DataSource=:memory:",
-                ["Jwt:SecretKey"] = "Super_Secret_Test_Jwt_Key_Must_Be_At_Least_256_Bits_Long_2026!",
+                ["ConnectionStrings:DefaultConnection"] = ConnectionString,
+                ["Jwt:Key"] = "Super_Secret_Test_Jwt_Key_Must_Be_At_Least_256_Bits_Long_2026!",
                 ["Jwt:Issuer"] = "HookBridge.ControlPlane",
                 ["Jwt:Audience"] = "HookBridge.DeveloperPortal",
                 ["Jwt:AccessTokenExpirationMinutes"] = "15",
@@ -31,7 +29,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 ["EventFlow:BaseUrl"] = "http://localhost:5000",
                 ["EventFlow:ApiKey"] = "test_eventflow_api_key_2026",
                 ["EventFlow:TimeoutSeconds"] = "10",
-                ["Ssrf:ResolveDns"] = "false"
+                ["Ssrf:ResolveDns"] = "false",
+                ["Cors:AllowedOrigins:0"] = "http://localhost:4200"
             };
 
             configBuilder.AddInMemoryCollection(testConfig);
@@ -39,6 +38,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
         builder.ConfigureServices(services =>
         {
+            // Remove existing EF Core / Npgsql registrations
             var descriptorsToRemove = services
                 .Where(d => d.ServiceType.FullName?.Contains("Npgsql", StringComparison.Ordinal) == true ||
                             d.ImplementationType?.FullName?.Contains("Npgsql", StringComparison.Ordinal) == true ||
@@ -54,12 +54,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 services.Remove(d);
             }
 
-            _connection = new SqliteConnection("DataSource=:memory:");
-            _connection.Open();
-
             services.AddDbContext<HookBridgeDbContext>(options =>
             {
-                options.UseSqlite(_connection);
+                options.UseNpgsql(ConnectionString);
             });
 
             services.AddScoped<IHookBridgeDbContext>(sp => sp.GetRequiredService<HookBridgeDbContext>());
@@ -88,24 +85,17 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     {
         try
         {
-            if (_connection != null)
-            {
-                await _connection.DisposeAsync();
-                _connection = null;
-            }
+            // Clean the database between test classes for isolation
+            using var scope = Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<HookBridgeDbContext>();
+            await dbContext.Database.EnsureDeletedAsync();
         }
-        catch
-        {
-            // Ignore connection disposal errors during test host teardown
-        }
+        catch { }
 
         try
         {
             await base.DisposeAsync();
         }
-        catch
-        {
-            // Ignore base teardown errors
-        }
+        catch { }
     }
 }

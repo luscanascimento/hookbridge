@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, computed, inject, signal, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, inject, signal, effect, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SandboxService } from '../../core/services/sandbox.service';
@@ -619,6 +620,7 @@ import { SkeletonLoaderComponent } from '../../shared/components/ui/skeleton-loa
   `
 })
 export class SandboxComponent implements OnInit, OnDestroy {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly sandboxService = inject(SandboxService);
   readonly signalR = inject(SignalRService);
   private readonly toast = inject(ToastService);
@@ -727,7 +729,7 @@ export class SandboxComponent implements OnInit, OnDestroy {
 
   loadSandboxes(): void {
     this.loadingSandboxes.set(true);
-    this.sandboxService.getSandboxes().subscribe({
+    this.sandboxService.getSandboxes().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (list) => {
         this.sandboxes.set(list);
         this.loadingSandboxes.set(false);
@@ -784,7 +786,7 @@ export class SandboxComponent implements OnInit, OnDestroy {
       search: this.searchQuery.trim() || undefined,
       page: 1,
       pageSize: 50
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (paged) => {
         this.requests.set(paged.items);
         this.loadingRequests.set(false);
@@ -800,7 +802,7 @@ export class SandboxComponent implements OnInit, OnDestroy {
     if (!sb) return;
 
     this.selectedRequestId.set(requestId);
-    this.sandboxService.getSandboxRequestById(sb.id, requestId).subscribe({
+    this.sandboxService.getSandboxRequestById(sb.id, requestId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (detail) => {
         this.selectedRequestDetail.set(detail);
       },
@@ -828,7 +830,7 @@ export class SandboxComponent implements OnInit, OnDestroy {
       isActive: this.simActive()
     };
 
-    this.sandboxService.updateSandbox(sb.id, command).subscribe({
+    this.sandboxService.updateSandbox(sb.id, command).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (updated) => {
         this.savingRules.set(false);
         this.sandboxes.update(list => list.map(s => s.id === updated.id ? updated : s));
@@ -854,7 +856,7 @@ export class SandboxComponent implements OnInit, OnDestroy {
     if (!sb) return;
 
     this.clearingRequests.set(true);
-    this.sandboxService.clearSandboxRequests(sb.id).subscribe({
+    this.sandboxService.clearSandboxRequests(sb.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.clearingRequests.set(false);
         this.requests.set([]);
@@ -885,7 +887,7 @@ export class SandboxComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.sandboxService.deleteSandbox(sb.id).subscribe({
+    this.sandboxService.deleteSandbox(sb.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.sandboxes.update(list => list.filter(s => s.id !== sb.id));
         const remaining = this.sandboxes();
@@ -934,7 +936,7 @@ export class SandboxComponent implements OnInit, OnDestroy {
       ttlHours: this.newSandboxTtlHours
     };
 
-    this.sandboxService.createSandbox(command).subscribe({
+    this.sandboxService.createSandbox(command).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (created) => {
         this.creatingSandbox.set(false);
         this.showCreateModal.set(false);

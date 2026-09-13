@@ -24,7 +24,7 @@ public class RegisterUseCaseDirectTests
         var hasher = new PasswordHasher();
         var tokenService = new TokenService(Options.Create(new JwtOptions
         {
-            SecretKey = "super_secret_test_key_must_be_256_bits_long_abcdefghijklmnopqrstuvwxyz!"
+            Key = "super_secret_test_key_must_be_256_bits_long_abcdefghijklmnopqrstuvwxyz!"
         }));
         var dt = new DateTimeProvider();
 

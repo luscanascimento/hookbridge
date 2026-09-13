@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, computed, inject, signal, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, inject, signal, effect, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -532,6 +533,7 @@ export type DeliveryViewMode = 'live' | 'history';
   `
 })
 export class DeliveriesComponent implements OnInit, OnDestroy {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly deliveryService = inject(DeliveryService);
   private readonly endpointService = inject(EndpointService);
   readonly signalr = inject(SignalRService);
@@ -586,7 +588,7 @@ export class DeliveriesComponent implements OnInit, OnDestroy {
     });
 
     // Handle query params on initial navigation
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       if (params['mode'] === 'history' || params['mode'] === 'live') {
         this.mode.set(params['mode'] as DeliveryViewMode);
       }
@@ -648,7 +650,7 @@ export class DeliveriesComponent implements OnInit, OnDestroy {
   }
 
   loadEndpoints(): void {
-    this.endpointService.getEndpoints().subscribe({
+    this.endpointService.getEndpoints().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => this.endpoints.set(data),
       error: () => {}
     });
@@ -721,7 +723,7 @@ export class DeliveriesComponent implements OnInit, OnDestroy {
       pageSize: this.historyPageSize()
     };
 
-    this.deliveryService.getDeliveries(query).subscribe({
+    this.deliveryService.getDeliveries(query).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res: PagedList<Delivery>) => {
         this.historyDeliveries.set(res.items || []);
         this.historyTotalCount.set(res.totalCount || 0);

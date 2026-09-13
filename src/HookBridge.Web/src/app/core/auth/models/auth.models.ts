@@ -19,6 +19,11 @@ export interface AuthResponse {
   user: UserProfile;
 }
 
+export interface AuthCookieResponse {
+  user: UserProfile;
+  message: string;
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;

@@ -1,4 +1,5 @@
-import { Component, computed, inject, input, model, output, signal, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, inject, input, model, output, signal, effect, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SlideOverComponent } from '../../shared/components/ui/slide-over.component';
@@ -522,6 +523,7 @@ import { PayloadDiffViewerComponent } from '../../shared/components/ui/payload-d
   `
 })
 export class DeliveryInspectorDrawerComponent {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly deliveryService = inject(DeliveryService);
   private readonly toast = inject(ToastService);
 
@@ -690,7 +692,7 @@ export class DeliveryInspectorDrawerComponent {
     this.isLoading.set(true);
     this.errorState.set(null);
 
-    this.deliveryService.getDeliveryById(id).subscribe({
+    this.deliveryService.getDeliveryById(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (detail) => {
         this.deliveryDetail.set(detail);
         this.selectedAttemptIndex.set(Math.max(0, (detail.attempts?.length || 1) - 1));
@@ -747,7 +749,7 @@ export class DeliveryInspectorDrawerComponent {
     if (!id) return;
 
     this.isReplaying.set(true);
-    this.deliveryService.replayDelivery(id, overrideId || undefined).subscribe({
+    this.deliveryService.replayDelivery(id, overrideId || undefined).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.isReplaying.set(false);
         this.closeOverrideModal();

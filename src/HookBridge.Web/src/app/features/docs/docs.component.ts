@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -571,6 +572,7 @@ import { SkeletonLoaderComponent } from '../../shared/components/ui/skeleton-loa
   `
 })
 export class DocsComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly docService = inject(DocService);
   readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
@@ -653,7 +655,7 @@ export class DocsComponent implements OnInit {
 
   loadApiReference(): void {
     this.loading.set(true);
-    this.docService.getApiReference().subscribe({
+    this.docService.getApiReference().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (ref) => {
         this.apiReference.set(ref);
         this.loading.set(false);
@@ -747,7 +749,7 @@ export class DocsComponent implements OnInit {
     const header = this.sandboxHeader();
     const payload = this.sandboxPayload();
 
-    this.docService.verifySignatureInteractive(secret, header, payload).subscribe({
+    this.docService.verifySignatureInteractive(secret, header, payload).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.sandboxVerifying.set(false);
         this.sandboxResult.set({

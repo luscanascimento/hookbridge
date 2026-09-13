@@ -12,9 +12,9 @@ public sealed class JwtOptions
     [Required(ErrorMessage = "Jwt:Audience is required.")]
     public string Audience { get; set; } = "HookBridge.DeveloperPortal";
 
-    [Required(ErrorMessage = "Jwt:SecretKey is required.")]
-    [MinLength(32, ErrorMessage = "Jwt:SecretKey must be at least 32 characters (256 bits) long.")]
-    public string SecretKey { get; set; } = string.Empty;
+    [Required(ErrorMessage = "Jwt:Key is required.")]
+    [MinLength(32, ErrorMessage = "Jwt:Key must be at least 32 characters (256 bits) long.")]
+    public string Key { get; set; } = string.Empty;
 
     [Range(1, 1440, ErrorMessage = "Jwt:AccessTokenExpirationMinutes must be between 1 and 1440 minutes.")]
     public int AccessTokenExpirationMinutes { get; set; } = 15;

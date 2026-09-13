@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using HookBridge.Application.Abstractions;
+using Microsoft.Extensions.Caching.Memory;
 using HookBridge.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,8 @@ public sealed class ApiKeyAuthenticationMiddleware
         HttpContext context,
         IHookBridgeDbContext dbContext,
         IApiKeyGenerator keyGenerator,
-        IDateTimeProvider dateTimeProvider)
+        IDateTimeProvider dateTimeProvider,
+        IMemoryCache cache)
     {
         var rawApiKey = ExtractApiKey(context);
 
@@ -33,10 +35,19 @@ public sealed class ApiKeyAuthenticationMiddleware
         {
             var keyHash = keyGenerator.ComputeHash(rawApiKey);
             var now = dateTimeProvider.UtcNow;
+            var cacheKey = $"apikey:{keyHash}";
 
-            var apiKey = await dbContext.ApiKeys
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(k => k.KeyHash == keyHash, context.RequestAborted);
+            if (!cache.TryGetValue(cacheKey, out HookBridge.Domain.Entities.ApiKey? apiKey))
+            {
+                apiKey = await dbContext.ApiKeys
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(k => k.KeyHash == keyHash, context.RequestAborted);
+
+                if (apiKey is not null && apiKey.IsActive)
+                {
+                    cache.Set(cacheKey, apiKey, TimeSpan.FromSeconds(60));
+                }
+            }
 
             if (apiKey == null || !apiKey.IsActive)
             {

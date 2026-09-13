@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -214,6 +215,7 @@ import { CodeViewerComponent } from '../../shared/components/ui/code-viewer.comp
   `
 })
 export class PayloadInspectorComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly payloadService = inject(PayloadService);
   private readonly deliveryService = inject(DeliveryService);
@@ -230,7 +232,7 @@ export class PayloadInspectorComponent implements OnInit {
 
   ngOnInit(): void {
     // Check query params
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       if (params['deliveryId']) {
         this.deliveryIdInput.set(params['deliveryId']);
         this.loadFromDeliveryId();
@@ -315,7 +317,7 @@ export class PayloadInspectorComponent implements OnInit {
     if (!id) return;
 
     this.isLoadingDelivery.set(true);
-    this.deliveryService.getDeliveryById(id).subscribe({
+    this.deliveryService.getDeliveryById(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (detail) => {
         this.isLoadingDelivery.set(false);
         const lastAttempt = detail.attempts && detail.attempts.length > 0

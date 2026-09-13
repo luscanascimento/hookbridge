@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, Output, inject, signal, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject, signal, OnChanges, SimpleChanges, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent, ButtonComponent } from '../../shared/components';
@@ -136,6 +137,7 @@ import { EventSchemaDetail, CheckCompatibilityResponse, CreateSchemaVersionReque
   `
 })
 export class SchemaVersionModalComponent implements OnChanges {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly schemaService = inject(EventSchemaService);
   private readonly toast = inject(ToastService);
 
@@ -212,7 +214,7 @@ export class SchemaVersionModalComponent implements OnChanges {
       oldSchemaJson: oldJson,
       newSchemaJson: this.schemaJson,
       mode: this.schema.compatibilityMode
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.isCheckingCompat.set(false);
         this.compatibilityResult.set(res);
@@ -251,7 +253,7 @@ export class SchemaVersionModalComponent implements OnChanges {
       forceOverrideCompatibility: this.forceOverride
     };
 
-    this.schemaService.createVersion(this.schema.id, req).subscribe({
+    this.schemaService.createVersion(this.schema.id, req).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (v) => {
         this.isSubmitting.set(false);
         this.toast.success('Version Created', `Version ${v.version} released for ${this.schema!.name}.`);

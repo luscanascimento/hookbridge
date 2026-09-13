@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ObservabilityService } from '../../core/services/observability.service';
@@ -596,6 +597,7 @@ import { ToastService } from '../../shared/components/ui/toast/toast.service';
   `
 })
 export class ObservabilityComponent implements OnInit, OnDestroy {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly obsService = inject(ObservabilityService);
   private readonly toast = inject(ToastService);
 
@@ -672,7 +674,7 @@ export class ObservabilityComponent implements OnInit, OnDestroy {
 
   loadSummary(): void {
     this.isLoadingSummary.set(true);
-    this.obsService.getSummary().subscribe({
+    this.obsService.getSummary().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => {
         this.summary.set(data);
         this.isLoadingSummary.set(false);
@@ -686,7 +688,7 @@ export class ObservabilityComponent implements OnInit, OnDestroy {
 
   loadInstruments(): void {
     this.isLoadingInstruments.set(true);
-    this.obsService.getInstruments().subscribe({
+    this.obsService.getInstruments().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => {
         this.instruments.set(data);
         this.isLoadingInstruments.set(false);
@@ -700,7 +702,7 @@ export class ObservabilityComponent implements OnInit, OnDestroy {
 
   loadSpans(): void {
     this.isLoadingSpans.set(true);
-    this.obsService.getRecentSpans(this.spanLimit()).subscribe({
+    this.obsService.getRecentSpans(this.spanLimit()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (data) => {
         this.spans.set(data);
         this.isLoadingSpans.set(false);
@@ -736,7 +738,7 @@ export class ObservabilityComponent implements OnInit, OnDestroy {
     const next = !this.showPrometheusModal();
     this.showPrometheusModal.set(next);
     if (next && !this.rawPrometheusText()) {
-      this.obsService.getPrometheusMetrics().subscribe({
+      this.obsService.getPrometheusMetrics().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (text) => this.rawPrometheusText.set(text),
         error: (err) => console.error('Failed to get Prometheus metrics:', err)
       });
@@ -760,7 +762,7 @@ export class ObservabilityComponent implements OnInit, OnDestroy {
       delayMs: this.syntheticDelayMs
     };
 
-    this.obsService.generateSyntheticTrace(cmd).subscribe({
+    this.obsService.generateSyntheticTrace(cmd).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.syntheticResult.set(res);
         this.isGeneratingTrace.set(false);

@@ -15,6 +15,12 @@ export interface DeliveryDetail extends Delivery {
   attempts: DeliveryAttempt[];
 }
 
+export interface ReplayDeliveryResponse {
+  deliveryId: string;
+  status: string;
+  message: string;
+}
+
 export interface DeliveryQueryParams {
   endpointId?: string | null;
   status?: DeliveryStatus | string | null;
@@ -56,8 +62,8 @@ export class DeliveryService {
     return this.http.get<DeliveryDetail>(`${this.baseUrl}/${id}`);
   }
 
-  replayDelivery(id: string, overrideEndpointId?: string): Observable<any> {
-    return this.http.post(`${this.baseUrl}/${id}/replay`, {
+  replayDelivery(id: string, overrideEndpointId?: string): Observable<ReplayDeliveryResponse> {
+    return this.http.post<ReplayDeliveryResponse>(`${this.baseUrl}/${id}/replay`, {
       overrideEndpointId: overrideEndpointId || null
     });
   }

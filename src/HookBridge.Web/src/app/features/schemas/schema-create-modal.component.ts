@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject, signal, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModalComponent, ButtonComponent } from '../../shared/components';
@@ -239,6 +240,7 @@ const SCHEMA_TEMPLATES: Record<string, { eventType: string; name: string; desc: 
   `
 })
 export class SchemaCreateModalComponent {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly schemaService = inject(EventSchemaService);
   private readonly toast = inject(ToastService);
 
@@ -318,7 +320,7 @@ export class SchemaCreateModalComponent {
       versionDescription: 'Initial schema release.'
     };
 
-    this.schemaService.createSchema(req).subscribe({
+    this.schemaService.createSchema(req).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.isSubmitting.set(false);
         this.toast.success('Schema Registered', `Event schema '${this.name}' created successfully.`);

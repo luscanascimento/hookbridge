@@ -47,7 +47,7 @@ public sealed class RefreshTokenRotationAndFamilyRevocationTests : IDisposable
 
         var jwtOptions = Options.Create(new JwtOptions
         {
-            SecretKey = "Super_Secret_Test_Key_At_Least_32_Bytes_Long_2026!",
+            Key = "Super_Secret_Test_Key_At_Least_32_Bytes_Long_2026!",
             Issuer = "HookBridge.ControlPlane",
             Audience = "HookBridge.DeveloperPortal",
             AccessTokenExpirationMinutes = 15,
